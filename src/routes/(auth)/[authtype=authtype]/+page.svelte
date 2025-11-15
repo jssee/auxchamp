@@ -1,0 +1,66 @@
+<script lang="ts">
+  import { page } from "$app/state";
+  import * as Card from "$lib/components/ui/card";
+  import SigninForm from "$lib/components/auth/signin-form.svelte";
+  import SignupForm from "$lib/components/auth/signup-form.svelte";
+
+  const isSignUp = $derived(page.params.authtype === "signup");
+</script>
+
+<main class="grid min-h-screen place-items-center">
+  <Card.Root class="w-full max-w-md">
+    <Card.Header>
+      <Card.Title class="text-xl">{isSignUp ? "Sign up" : "Sign in"}</Card.Title
+      >
+    </Card.Header>
+
+    <Card.Content>
+      {#if isSignUp}
+        <SignupForm />
+      {:else}
+        <SigninForm />
+      {/if}
+    </Card.Content>
+
+    <Card.Footer>
+      {#if isSignUp}
+        {@render switchAuthType({
+          question: "Already have an account? ",
+          href: "/signin",
+          cta: "Sign in",
+          postscript: " instead.",
+        })}
+      {:else}
+        {@render switchAuthType({
+          question: "Don't have an account? ",
+          href: "/signup",
+          cta: "Sign up",
+          postscript: " for free.",
+        })}
+      {/if}
+    </Card.Footer>
+  </Card.Root>
+</main>
+
+{#snippet switchAuthType({
+  question,
+  href,
+  cta,
+  postscript,
+}: {
+  question: string;
+  href: string;
+  cta: string;
+  postscript: string;
+})}
+  <p class="mt-4 text-center text-sm text-gray-600 dark:text-zinc-400">
+    {question}
+    <a
+      {href}
+      class="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
+    >
+      {cta}
+    </a>
+    {postscript}
+  </p>
+{/snippet}
