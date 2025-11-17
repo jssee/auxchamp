@@ -1,17 +1,23 @@
 import { error, redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
-import * as z from "zod";
+import * as v from "valibot";
 
-import { form, getRequestEvent } from "$app/server";
+import { form, query, getRequestEvent } from "$app/server";
 import { auth } from "$lib/auth";
 import { db } from "$lib/server/db";
 import { user } from "$lib/server/db/schema";
 
 export const signUp = form(
-  z.object({
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.email(),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+  v.object({
+    username: v.pipe(
+      v.string(),
+      v.minLength(3, "Username must be at least 3 characters"),
+    ),
+    email: v.pipe(v.string(), v.email()),
+    password: v.pipe(
+      v.string(),
+      v.minLength(8, "Password must be at least 8 characters"),
+    ),
   }),
   async (data, invalid) => {
     const { username, email, password } = data;
@@ -49,9 +55,12 @@ export const signOut = form(async () => {
 });
 
 export const signIn = form(
-  z.object({
-    email: z.email().min(1, "Email is required"),
-    password: z.string().min(1, "Password is required"),
+  v.object({
+    email: v.pipe(v.string(), v.email()),
+    password: v.pipe(
+      v.string(),
+      v.minLength(8, "Password must be at least 8 characters"),
+    ),
   }),
   async (data, invalid) => {
     const { email, password } = data;
