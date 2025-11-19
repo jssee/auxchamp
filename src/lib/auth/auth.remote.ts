@@ -21,6 +21,7 @@ export const signUp = form(
   }),
   async (data, invalid) => {
     const { username, email, password } = data;
+    const { url } = getRequestEvent();
 
     try {
       const existingUsername = await db.query.user.findFirst({
@@ -36,13 +37,14 @@ export const signUp = form(
       console.error(err);
       invalid(err.body.message);
     }
+    const redirectTo = url.searchParams.get("redirectTo");
 
-    redirect(302, "/");
+    redirect(302, redirectTo ?? "/");
   },
 );
 
 export const signOut = form(async () => {
-  const { request } = getRequestEvent();
+  const { request, url } = getRequestEvent();
   try {
     await auth.api.signOut({
       headers: request.headers,
@@ -51,7 +53,9 @@ export const signOut = form(async () => {
     console.error(err);
     return error(500, { message: "Something went wrong" });
   }
-  redirect(302, "/signin");
+  const redirectTo = url.searchParams.get("redirectTo");
+
+  redirect(302, redirectTo ?? "/");
 });
 
 export const signIn = form(
@@ -64,13 +68,16 @@ export const signIn = form(
   }),
   async (data, invalid) => {
     const { email, password } = data;
+    const { url } = getRequestEvent();
+
     try {
       await auth.api.signInEmail({ body: { email, password } });
     } catch (err) {
       console.error(err);
       invalid(err.body.message);
     }
+    const redirectTo = url.searchParams.get("redirectTo");
 
-    redirect(302, "/");
+    redirect(302, redirectTo ?? "/");
   },
 );
