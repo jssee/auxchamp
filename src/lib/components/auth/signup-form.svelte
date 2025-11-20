@@ -14,14 +14,14 @@
 
   <Field.Set>
     <Field.Field>
-      <Field.Label for="username-{id}">Username</Field.Label>
+      <Field.Label for="name-{id}">Username</Field.Label>
       <Input
-        id="username-{id}"
+        id="name-{id}"
         autocomplete="off"
-        {...signUp.fields.username.as("text")}
+        {...signUp.fields.name.as("text")}
       />
       <div class="[&>*]:leading-snug">
-        {#each signUp.fields.username.issues() as issue}
+        {#each signUp.fields.name.issues() as issue}
           <Field.Error>{issue.message}</Field.Error>
         {/each}
       </div>

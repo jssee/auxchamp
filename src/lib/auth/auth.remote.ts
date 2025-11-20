@@ -9,7 +9,7 @@ import { user } from "$lib/server/db/schema";
 
 export const signUp = form(
   v.object({
-    username: v.pipe(
+    name: v.pipe(
       v.string(),
       v.minLength(3, "Username must be at least 3 characters"),
     ),
@@ -20,19 +20,19 @@ export const signUp = form(
     ),
   }),
   async (data, invalid) => {
-    const { username, email, password } = data;
+    const { name, email, password } = data;
     const { url } = getRequestEvent();
 
     try {
       const existingUsername = await db.query.user.findFirst({
-        where: eq(user.name, username),
+        where: eq(user.name, name),
       });
 
       if (existingUsername) {
-        invalid(invalid.username("Username already taken"));
+        invalid(invalid.name("Username already taken"));
       }
 
-      await auth.api.signUpEmail({ body: { name: username, email, password } });
+      await auth.api.signUpEmail({ body: { name, email, password } });
     } catch (err) {
       console.error(err);
       invalid(err.body.message);
