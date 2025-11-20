@@ -15,6 +15,13 @@
       "when": 1763100101884,
       "tag": "0001_lovely_umar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763611649809,
+      "tag": "0002_true_black_crow",
+      "breakpoints": true
     }
   ]
 }

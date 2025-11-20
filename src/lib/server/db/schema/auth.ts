@@ -1,11 +1,12 @@
-import { pgTable, text, timestamp, boolean, serial } from "drizzle-orm/pg-core";
+/*
+ * user, session, account, and verification tables created and managed by better-auth
+ * see: https://www.better-auth.com/docs/concepts/database
+ */
+import { boolean, pgSchema, text, timestamp } from "drizzle-orm/pg-core";
 
-export const profile = pgTable("profile", {
-  id: serial("id").primaryKey(),
-  displayName: text("display_name").unique(),
-});
+export const auth = pgSchema("auth");
 
-export const user = pgTable("user", {
+export const user = auth.table("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -18,7 +19,7 @@ export const user = pgTable("user", {
     .notNull(),
 });
 
-export const session = pgTable("session", {
+export const session = auth.table("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
@@ -33,7 +34,7 @@ export const session = pgTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const account = pgTable("account", {
+export const account = auth.table("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
@@ -53,7 +54,7 @@ export const account = pgTable("account", {
     .notNull(),
 });
 
-export const verification = pgTable("verification", {
+export const verification = auth.table("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
