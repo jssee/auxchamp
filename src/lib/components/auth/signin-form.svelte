@@ -21,7 +21,7 @@
         placeholder="you@example.com"
         {...signIn.fields.email.as("email")}
       />
-      <div class="[&>*]:leading-snug">
+      <div class="*:leading-snug">
         {#each signIn.fields.email.issues() as issue}
           <Field.Error>{issue.message}</Field.Error>
         {/each}

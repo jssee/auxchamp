@@ -81,3 +81,30 @@ export const signIn = form(
     redirect(302, redirectTo ?? "/");
   },
 );
+
+export const updatePassword = form(
+  v.object({
+    newPassword: v.pipe(
+      v.string(),
+      v.minLength(8, "Password must be at least 8 characters"),
+    ),
+    currentPassword: v.pipe(v.string()),
+  }),
+  async (data, invalid) => {
+    const { newPassword, currentPassword } = data;
+    const { request, url } = getRequestEvent();
+
+    try {
+      await auth.api.changePassword({
+        body: { newPassword, currentPassword, revokeOtherSessions: true },
+        headers: request.headers,
+      });
+    } catch (err) {
+      console.error(err);
+      invalid(err.body.message);
+    }
+    const redirectTo = url.searchParams.get("redirectTo");
+
+    redirect(302, redirectTo ?? "/");
+  },
+);

@@ -20,7 +20,7 @@
         autocomplete="off"
         {...signUp.fields.name.as("text")}
       />
-      <div class="[&>*]:leading-snug">
+      <div class="*:leading-snug">
         {#each signUp.fields.name.issues() as issue}
           <Field.Error>{issue.message}</Field.Error>
         {/each}
@@ -35,7 +35,7 @@
         placeholder="you@example.com"
         {...signUp.fields.email.as("email")}
       />
-      <div class="[&>*]:leading-snug">
+      <div class="*:leading-snug">
         {#each signUp.fields.email.issues() as issue}
           <Field.Error>{issue.message}</Field.Error>
         {/each}
@@ -49,7 +49,7 @@
         autocomplete="new-password"
         {...signUp.fields.password.as("password")}
       />
-      <div class="[&>*]:leading-snug">
+      <div class="*:leading-snug">
         {#each signUp.fields.password.issues() as issue}
           <Field.Error>{issue.message}</Field.Error>
         {/each}
