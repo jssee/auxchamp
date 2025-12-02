@@ -92,7 +92,7 @@ export const updatePassword = form(
   }),
   async (data, invalid) => {
     const { newPassword, currentPassword } = data;
-    const { request, url } = getRequestEvent();
+    const { request } = getRequestEvent();
 
     try {
       await auth.api.changePassword({
@@ -103,8 +103,7 @@ export const updatePassword = form(
       console.error(err);
       invalid(err.body.message);
     }
-    const redirectTo = url.searchParams.get("redirectTo");
 
-    redirect(302, redirectTo ?? "/");
+    redirect(302, "/signout");
   },
 );
