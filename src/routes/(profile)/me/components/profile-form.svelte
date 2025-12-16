@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import * as Field from "$lib/components/ui/field";
-  import { updateMe } from "../../../routes/me/me.remote";
+  import { updateMe } from "../me.remote";
   import type { Session } from "$lib/auth";
 
   let { user }: { user: Session["user"] } = $props();

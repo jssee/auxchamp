@@ -1,7 +1,7 @@
 <script lang="ts">
-  import ProfileForm from "$lib/components/me/profile-form.svelte";
   import PasswordForm from "$lib/components/auth/password-form.svelte";
-  import DeleteAccountForm from "$lib/components/me/delete-account-form.svelte";
+  import ProfileForm from "./components/profile-form.svelte";
+  import DeleteAccountForm from "./components/delete-account-form.svelte";
   import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();

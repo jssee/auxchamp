@@ -1,5 +1,3 @@
-<main class="grid-layout h-full">
-  <section class="col-content">
-    <h1 class="font-display font-bold">auxchamp</h1>
-  </section>
+<main class="grid-layout grid-rows-1">
+  <section class="col-content my-auto"></section>
 </main>
