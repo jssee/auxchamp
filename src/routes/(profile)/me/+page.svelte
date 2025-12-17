@@ -7,9 +7,9 @@
   let { data }: PageProps = $props();
 </script>
 
-<main class="grid-layout grid-row-2 h-full">
-  <div class="col-content flex flex-col gap-7">
-    <section class="pt-7">
+<main class="col-content">
+  <div class="flex flex-col gap-7">
+    <section>
       <ProfileForm user={data.user} />
     </section>
 

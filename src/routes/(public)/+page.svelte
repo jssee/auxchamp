@@ -1,3 +1,3 @@
-<main class="grid-layout grid-rows-1">
-  <section class="col-content my-auto"></section>
+<main class="col-content">
+  <h1>Public</h1>
 </main>

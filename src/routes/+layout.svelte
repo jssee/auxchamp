@@ -13,5 +13,7 @@
 
 <ModeWatcher />
 
-<AppHeader />
-{@render children()}
+<div class="grid-layout h-svh">
+  <AppHeader />
+  {@render children()}
+</div>

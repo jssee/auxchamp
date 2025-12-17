@@ -6,9 +6,10 @@
   import { Button } from "$lib/components/ui/button";
 </script>
 
-<header class="grid-layout h-16 grid-rows-1">
-  <div class="col-content flex items-center justify-between">
+<header class="col-content h-16">
+  <div class="flex h-16 items-center justify-between gap-4">
     <a class="font-display font-bold" href="/">auxchamp</a>
+
     <NavigationMenu.Root class="col-content">
       <NavigationMenu.List class="flex">
         <NavigationMenu.Item>
