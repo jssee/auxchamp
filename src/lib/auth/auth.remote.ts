@@ -2,7 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { form, query, getRequestEvent } from "$app/server";
+import { form, getRequestEvent } from "$app/server";
 import { auth } from "$lib/auth";
 import { db } from "$lib/server/db";
 import { user } from "$lib/server/db/schema";
@@ -78,7 +78,7 @@ export const signIn = form(
     }
     const redirectTo = url.searchParams.get("redirectTo");
 
-    redirect(302, redirectTo ?? "/");
+    redirect(302, redirectTo ?? "/home");
   },
 );
 
