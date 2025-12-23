@@ -3,7 +3,7 @@
   import { Input } from "$lib/components/ui/input";
   import * as Item from "$lib/components/ui/item";
   import * as Field from "$lib/components/ui/field";
-  import { deleteMe } from "../../../routes/me/me.remote";
+  import { deleteMe } from "../me.remote";
 
   let confirmingDelete = $state(false);
   let deleteConfirmation = $state("");

@@ -7,7 +7,7 @@
   const isSignUp = $derived(page.params.authtype === "signup");
 </script>
 
-<main class="grid min-h-screen place-items-center">
+<main class="col-content grid h-full place-items-center">
   <Card.Root class="w-full max-w-md">
     <Card.Header>
       <Card.Title class="text-xl">{isSignUp ? "Sign up" : "Sign in"}</Card.Title
