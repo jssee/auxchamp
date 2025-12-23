@@ -39,7 +39,7 @@ export const signUp = form(
     }
     const redirectTo = url.searchParams.get("redirectTo");
 
-    redirect(302, redirectTo ?? "/");
+    redirect(302, redirectTo ?? "/home");
   },
 );
 
