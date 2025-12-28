@@ -53,6 +53,7 @@
     "@fontsource-variable/unbounded": "^5.2.8",
     "@neondatabase/serverless": "^1.0.2",
     "better-auth": "^1.3.34",
+    "drizzle-valibot": "^0.4.2",
     "mode-watcher": "^1.1.0",
     "runed": "^0.37.0",
     "valibot": "^1.1.0"

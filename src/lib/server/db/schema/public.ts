@@ -6,6 +6,11 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import {
+  createSelectSchema,
+  createUpdateSchema,
+  createInsertSchema,
+} from "drizzle-valibot";
 
 import { user } from "./auth";
 
@@ -21,6 +26,9 @@ export const battle = pgTable("battle", {
   currentStageId: text(),
   createdAt: timestamp().defaultNow().notNull(),
 });
+export const battleSelectSchema = createSelectSchema(battle);
+export const battleUpdateSchema = createUpdateSchema(battle);
+export const battleInsertSchema = createInsertSchema(battle);
 
 export const player = pgTable("player", {
   id: text("id").primaryKey(),
