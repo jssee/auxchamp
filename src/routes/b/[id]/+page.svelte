@@ -30,7 +30,7 @@
       </dl>
     </Card.Content>
     <Card.Footer>
-      {#if data.battle.creatorId === data.user?.id}
+      {#if data.battle.creatorId === data.user?.id && data.battle.status !== "cancelled"}
         <Button href="/b/{data.battle.id}/edit">Edit</Button>
       {/if}
     </Card.Footer>
