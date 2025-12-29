@@ -5,22 +5,14 @@ import * as v from "valibot";
 
 import { form, query, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
-import {
-  battle,
-  player,
-  battleInsertSchema,
-  battleUpdateSchema,
-} from "$lib/server/db/schema";
+import { battle, player, battleInsertSchema } from "$lib/server/db/schema";
+import { booleanFromForm } from "$lib/utils";
 
-// Pick fields from drizzle schema and make them required (removes optional/null)
-const battleFormSchema = v.required(
-  v.pick(battleInsertSchema, [
-    "name",
-    "visibility",
-    "maxPlayers",
-    "doubleSubmissions",
-  ]),
-);
+// Form schema: derives from drizzle schema, adds form coercion for boolean fields
+const battleFormSchema = v.object({
+  ...v.pick(battleInsertSchema, ["name", "visibility", "maxPlayers"]).entries,
+  doubleSubmissions: booleanFromForm,
+});
 
 // GET: User's battles (created + joined)
 export const getBattles = query(async () => {
@@ -77,13 +69,8 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
   redirect(302, `/b/${id}`);
 });
 
-// Pick update fields from drizzle schema
-const battleUpdateFormSchema = v.pick(battleUpdateSchema, [
-  "name",
-  "visibility",
-  "maxPlayers",
-  "doubleSubmissions",
-]);
+// Update schema: partial version of form schema
+const battleUpdateFormSchema = v.partial(battleFormSchema);
 
 // POST: Update battle (id from URL params)
 export const updateBattle = form(
