@@ -95,7 +95,6 @@
 
       <Field.Separator />
       <Field.Field orientation="responsive" class="justify-end">
-        <Button type="reset" variant="outline">Reset</Button>
         <Button type="submit">Update Battle</Button>
       </Field.Field>
     </Field.Group>
