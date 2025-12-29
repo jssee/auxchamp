@@ -8,6 +8,7 @@
 
   let id = $props.id();
   let visibility = $state("private");
+  let doubleSubmissions = $state(false);
 </script>
 
 <form {...createBattle}>
@@ -59,7 +60,16 @@
         />
       </Field.Field>
 
-      <Field.Field orientation="responsive">
+      <Field.Field orientation="horizontal">
+        <Checkbox
+          id="doubleSubmissions-{id}"
+          bind:checked={doubleSubmissions}
+        />
+        <input
+          type="hidden"
+          name="doubleSubmissions"
+          value={doubleSubmissions ? "true" : ""}
+        />
         <Field.Content>
           <Field.Label for="doubleSubmissions-{id}">
             Allow Double Submissions
@@ -68,11 +78,6 @@
             <Field.Error>{issue.message}</Field.Error>
           {/each}
         </Field.Content>
-        <Checkbox
-          id="doubleSubmissions-{id}"
-          name="doubleSubmissions"
-          value="true"
-        />
       </Field.Field>
 
       <Field.Separator />

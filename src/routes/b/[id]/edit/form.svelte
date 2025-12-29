@@ -70,27 +70,24 @@
         />
       </Field.Field>
 
-      <Field.Field orientation="responsive">
+      <Field.Field orientation="horizontal">
+        <Checkbox
+          id="doubleSubmissions-{id}"
+          bind:checked={doubleSubmissions}
+        />
+        <input
+          type="hidden"
+          name="doubleSubmissions"
+          value={doubleSubmissions ? "true" : ""}
+        />
         <Field.Content>
-          <Field.Label for="doubleSubmissions-{id}"
-            >Double Submissions</Field.Label
-          >
+          <Field.Label for="doubleSubmissions-{id}">
+            Double Submissions
+          </Field.Label>
           <Field.Description>
             Allow players to submit more than one track per stage.
           </Field.Description>
         </Field.Content>
-        <div class="flex items-center gap-2">
-          <Checkbox
-            id="doubleSubmissions-{id}"
-            name="doubleSubmissions"
-            bind:checked={doubleSubmissions}
-          />
-          <input
-            type="hidden"
-            name="doubleSubmissions"
-            value={doubleSubmissions ? "on" : ""}
-          />
-        </div>
       </Field.Field>
 
       <Field.Separator />
