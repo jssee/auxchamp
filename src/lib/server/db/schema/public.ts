@@ -19,12 +19,14 @@ export const battle = pgTable("battle", {
   id: text("id").primaryKey(),
   name: text().notNull(),
   creatorId: text().notNull(),
-  status: text({ enum: ["draft", "active", "completed", "cancelled"] }).default(
-    "draft",
-  ),
-  visibility: text({ enum: ["public", "private"] }).default("private"),
-  maxPlayers: integer().default(8),
-  doubleSubmissions: boolean().default(false),
+  status: text({ enum: ["draft", "active", "completed", "cancelled"] })
+    .default("draft")
+    .notNull(),
+  visibility: text({ enum: ["public", "private"] })
+    .default("private")
+    .notNull(),
+  maxPlayers: integer().default(8).notNull(),
+  doubleSubmissions: boolean().default(false).notNull(),
   inviteCode: text(),
   currentStageId: text(),
   createdAt: timestamp().defaultNow().notNull(),
