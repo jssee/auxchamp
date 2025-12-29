@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Checkbox } from "$lib/components/ui/checkbox";
+  import { Switch } from "$lib/components/ui/switch";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
   import { updateBattle, deleteBattle } from "$lib/remote/battle.remote";
@@ -71,7 +71,7 @@
       </Field.Field>
 
       <Field.Field orientation="horizontal">
-        <Checkbox
+        <Switch
           id="doubleSubmissions-{id}"
           bind:checked={doubleSubmissions}
         />
