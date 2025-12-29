@@ -11,24 +11,30 @@ import {
   createUpdateSchema,
   createInsertSchema,
 } from "drizzle-valibot";
+import * as v from "valibot";
 
 import { user } from "./auth";
 
 export const battle = pgTable("battle", {
   id: text("id").primaryKey(),
-  name: text(),
+  name: text().notNull(),
   creatorId: text().notNull(),
-  status: text({ enum: ["active", "completed"] }),
-  visibility: text({ enum: ["public", "private"] }),
-  maxPlayers: integer(),
-  doubleSubmissions: boolean(),
+  status: text({ enum: ["draft", "active", "completed", "cancelled"] }).default(
+    "draft",
+  ),
+  visibility: text({ enum: ["public", "private"] }).default("private"),
+  maxPlayers: integer().default(8),
+  doubleSubmissions: boolean().default(false),
   inviteCode: text(),
   currentStageId: text(),
   createdAt: timestamp().defaultNow().notNull(),
 });
 export const battleSelectSchema = createSelectSchema(battle);
 export const battleUpdateSchema = createUpdateSchema(battle);
-export const battleInsertSchema = createInsertSchema(battle);
+export const battleInsertSchema = createInsertSchema(battle, {
+  name: (schema) => v.pipe(schema, v.minLength(1, "Name is required")),
+  maxPlayers: (schema) => v.pipe(schema, v.minValue(2), v.maxValue(32)),
+});
 
 export const player = pgTable("player", {
   id: text("id").primaryKey(),

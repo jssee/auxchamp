@@ -29,11 +29,14 @@ bd sync --status            # check sync status
 ```
 
 **Workflow rules**:
+
 - Track ALL work in beads, not TodoWrite
 - Use `bd create` to capture discovered work as you go
 - Check `bd ready` to find next available work
 - Run `bd sync` at end of session before pushing code
 - Git hooks auto-sync on commits, but manual `bd sync` ensures push to remote
+- Track all non‑trivial changes in git; Commit early and often.
+- Commit changes even if your high-level tasks are not yet done.
 
 ## SvelteKit Features
 
