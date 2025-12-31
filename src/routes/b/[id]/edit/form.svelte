@@ -14,7 +14,8 @@
 </script>
 
 <!-- Update form -->
-<form action="{updateBattle.action}?id={battle.id}" method="post">
+<form {...updateBattle}>
+  <input type="hidden" name="id" value={battle.id} />
   <Field.Set>
     <Field.Legend>Edit Battle</Field.Legend>
     <Field.Description>Update your battle settings.</Field.Description>
@@ -23,31 +24,32 @@
       <Field.Field orientation="responsive">
         <Field.Content>
           <Field.Label for="name-{id}">Name</Field.Label>
-          <Field.Description>The name of your battle.</Field.Description>
+          {#each updateBattle.fields.name.issues() as issue}
+            <Field.Error>{issue.message}</Field.Error>
+          {/each}
         </Field.Content>
         <Input
           id="name-{id}"
-          name="name"
-          type="text"
+          {...updateBattle.fields.name.as("text")}
           value={battle.name}
-          required
         />
       </Field.Field>
 
       <Field.Field orientation="responsive">
         <Field.Content>
           <Field.Label for="visibility-{id}">Visibility</Field.Label>
-          <Field.Description>
-            Who can see and join this battle.
-          </Field.Description>
+          {#each updateBattle.fields.visibility.issues() as issue}
+            <Field.Error>{issue.message}</Field.Error>
+          {/each}
         </Field.Content>
-        <Select.Root type="single" name="visibility" bind:value={visibility}>
+        <input type="hidden" name="visibility" value={visibility} />
+        <Select.Root type="single" bind:value={visibility}>
           <Select.Trigger id="visibility-{id}">
             {visibility === "public" ? "Public" : "Private"}
           </Select.Trigger>
           <Select.Content>
-            <Select.Item value="public" label="Public" />
             <Select.Item value="private" label="Private" />
+            <Select.Item value="public" label="Public" />
           </Select.Content>
         </Select.Root>
       </Field.Field>
@@ -55,26 +57,21 @@
       <Field.Field orientation="responsive">
         <Field.Content>
           <Field.Label for="maxPlayers-{id}">Max Players</Field.Label>
-          <Field.Description>
-            Maximum number of players (2-32).
-          </Field.Description>
+          {#each updateBattle.fields.maxPlayers.issues() as issue}
+            <Field.Error>{issue.message}</Field.Error>
+          {/each}
         </Field.Content>
         <Input
+          {...updateBattle.fields.maxPlayers.as("number")}
           id="maxPlayers-{id}"
-          name="maxPlayers"
-          type="number"
           min={2}
           max={32}
           value={battle.maxPlayers}
-          required
         />
       </Field.Field>
 
       <Field.Field orientation="horizontal">
-        <Switch
-          id="doubleSubmissions-{id}"
-          bind:checked={doubleSubmissions}
-        />
+        <Switch id="doubleSubmissions-{id}" bind:checked={doubleSubmissions} />
         <input
           type="hidden"
           name="doubleSubmissions"
@@ -84,9 +81,9 @@
           <Field.Label for="doubleSubmissions-{id}">
             Double Submissions
           </Field.Label>
-          <Field.Description>
-            Allow players to submit more than one track per stage.
-          </Field.Description>
+          {#each updateBattle.fields.doubleSubmissions.issues() as issue}
+            <Field.Error>{issue.message}</Field.Error>
+          {/each}
         </Field.Content>
       </Field.Field>
 

@@ -69,18 +69,20 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
   redirect(302, `/b/${id}`);
 });
 
-// Update schema: partial version of form schema
-const battleUpdateFormSchema = v.partial(battleFormSchema);
+// Update schema: partial version of form schema + required id
+const battleUpdateFormSchema = v.object({
+  id: v.string(),
+  ...v.partial(battleFormSchema).entries,
+});
 
-// POST: Update battle (id from URL params)
+// POST: Update battle (id from form data)
 export const updateBattle = form(
   battleUpdateFormSchema,
   async (data, invalid) => {
-    const { locals, url } = getRequestEvent();
+    const { locals } = getRequestEvent();
     if (!locals.user) error(401, "Not authenticated");
 
-    const id = url.searchParams.get("id");
-    if (!id) error(400, "Missing battle ID");
+    const { id, ...updates } = data;
 
     const existing = await db.query.battle.findFirst({
       where: eq(battle.id, id),
@@ -90,7 +92,7 @@ export const updateBattle = form(
     if (existing.creatorId !== locals.user.id) error(403, "Not authorized");
 
     try {
-      await db.update(battle).set(data).where(eq(battle.id, id));
+      await db.update(battle).set(updates).where(eq(battle.id, id));
     } catch (err) {
       console.error(err);
       invalid((err as Error).message);

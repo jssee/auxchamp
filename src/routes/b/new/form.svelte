@@ -61,10 +61,7 @@
       </Field.Field>
 
       <Field.Field orientation="horizontal">
-        <Switch
-          id="doubleSubmissions-{id}"
-          bind:checked={doubleSubmissions}
-        />
+        <Switch id="doubleSubmissions-{id}" bind:checked={doubleSubmissions} />
         <input
           type="hidden"
           name="doubleSubmissions"
