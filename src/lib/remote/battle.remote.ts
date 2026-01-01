@@ -4,7 +4,6 @@ import { nanoid } from "nanoid";
 import * as v from "valibot";
 
 import { env } from "$env/dynamic/private";
-import { dev } from "$app/environment";
 import { form, query, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
 import {
@@ -14,7 +13,7 @@ import {
   battleInsertSchema,
   type QStashJobRef,
 } from "$lib/server/db/schema";
-import { qstash } from "$lib/server/qstash";
+import { scheduleStageTransition, cancelJob } from "$lib/server/qstash";
 import { booleanFromForm } from "$lib/utils";
 
 // Stage schema for form input
@@ -170,66 +169,32 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
       const stageNumber = i + 1;
       const isLastStage = i === parsedStages.length - 1;
 
-      const jobIds: QStashJobRef[] = [];
+      const common = { baseUrl, battleId, stageId, stageNumber };
 
-      // Skip QStash scheduling in dev mode (can't reach localhost)
-      if (!dev) {
-        // Schedule voting_open at submissionDeadline
-        const votingOpenJob = await qstash.publishJSON({
-          url: `${baseUrl}/api/qstash/stage-transition`,
-          notBefore: Math.floor(stageData.submissionDeadline.getTime() / 1000),
-          body: {
-            battleId,
-            stageId,
-            stageNumber,
-            action: "voting_open",
-            expectedDeadline: stageData.submissionDeadline.toISOString(),
-            idempotencyHash: crypto.randomUUID(),
-          },
-        });
-        jobIds.push({
+      // Schedule stage transition jobs (returns null in dev mode)
+      const jobs = await Promise.all([
+        scheduleStageTransition({
+          ...common,
           action: "voting_open",
-          messageId: votingOpenJob.messageId,
-        });
-
-        // Schedule stage_closed at votingDeadline
-        const stageClosedJob = await qstash.publishJSON({
-          url: `${baseUrl}/api/qstash/stage-transition`,
-          notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
-          body: {
-            battleId,
-            stageId,
-            stageNumber,
-            action: "stage_closed",
-            expectedDeadline: stageData.votingDeadline.toISOString(),
-            idempotencyHash: crypto.randomUUID(),
-          },
-        });
-        jobIds.push({
+          scheduledFor: stageData.submissionDeadline,
+        }),
+        scheduleStageTransition({
+          ...common,
           action: "stage_closed",
-          messageId: stageClosedJob.messageId,
-        });
+          scheduledFor: stageData.votingDeadline,
+        }),
+        ...(isLastStage
+          ? [
+              scheduleStageTransition({
+                ...common,
+                action: "battle_completed",
+                scheduledFor: stageData.votingDeadline,
+              }),
+            ]
+          : []),
+      ]);
 
-        // For last stage, also schedule battle_completed
-        if (isLastStage) {
-          const battleCompletedJob = await qstash.publishJSON({
-            url: `${baseUrl}/api/qstash/stage-transition`,
-            notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
-            body: {
-              battleId,
-              stageId,
-              stageNumber,
-              action: "battle_completed",
-              expectedDeadline: stageData.votingDeadline.toISOString(),
-              idempotencyHash: crypto.randomUUID(),
-            },
-          });
-          jobIds.push({
-            action: "battle_completed",
-            messageId: battleCompletedJob.messageId,
-          });
-        }
-      }
+      const jobIds = jobs.filter((j): j is QStashJobRef => j !== null);
 
       // Insert stage
       await db.insert(stage).values({
@@ -314,14 +279,7 @@ export const cancelBattle = form(
     // Cancel all pending QStash jobs
     for (const s of existing.stages) {
       if (s.jobIds && Array.isArray(s.jobIds)) {
-        for (const job of s.jobIds) {
-          try {
-            await qstash.messages.delete(job.messageId);
-          } catch (err) {
-            // Job may already be delivered or not exist, continue
-            console.warn(`Failed to cancel QStash job ${job.messageId}:`, err);
-          }
-        }
+        await Promise.all(s.jobIds.map((job) => cancelJob(job.messageId)));
       }
     }
 
