@@ -4,7 +4,7 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
-  import { updateBattle, deleteBattle } from "$lib/remote/battle.remote";
+  import { updateBattle, cancelBattle } from "$lib/remote/battle.remote";
 
   let { battle } = $props();
   let id = $props.id();
@@ -96,7 +96,7 @@
 </form>
 
 <!-- Delete form (separate) -->
-<form {...deleteBattle} class="mt-8">
+<form {...cancelBattle} class="mt-8">
   <Field.Set>
     <Field.Legend>Danger Zone</Field.Legend>
     <Field.Description>Irreversible actions.</Field.Description>

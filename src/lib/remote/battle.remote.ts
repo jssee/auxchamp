@@ -270,6 +270,11 @@ export const updateBattle = form(
     if (!existing) error(404, "Battle not found");
     if (existing.creatorId !== locals.user.id) error(403, "Not authorized");
 
+    if (existing.status === "completed" || existing.status === "cancelled") {
+      invalid("Cannot edit a " + existing.status + " battle");
+      return;
+    }
+
     try {
       await db.update(battle).set(updates).where(eq(battle.id, id));
     } catch (err) {
@@ -283,7 +288,7 @@ export const updateBattle = form(
 );
 
 // POST: Cancel battle (id from hidden input)
-export const deleteBattle = form(
+export const cancelBattle = form(
   v.object({ id: v.string() }),
   async (data, invalid) => {
     const { locals } = getRequestEvent();
@@ -291,21 +296,46 @@ export const deleteBattle = form(
 
     const existing = await db.query.battle.findFirst({
       where: eq(battle.id, data.id),
+      with: { stages: true },
     });
 
     if (!existing) error(404, "Battle not found");
     if (existing.creatorId !== locals.user.id) error(403, "Not authorized");
 
-    try {
-      await db
+    if (existing.status === "completed" || existing.status === "cancelled") {
+      invalid("Cannot cancel a " + existing.status + " battle");
+      return;
+    }
+
+    // Cancel all pending QStash jobs
+    for (const s of existing.stages) {
+      if (s.jobIds && Array.isArray(s.jobIds)) {
+        for (const job of s.jobIds) {
+          try {
+            await qstash.messages.delete(job.messageId);
+          } catch (err) {
+            // Job may already be delivered or not exist, continue
+            console.warn(`Failed to cancel QStash job ${job.messageId}:`, err);
+          }
+        }
+      }
+    }
+
+    // Update battle status and all stage phases
+    await db.transaction(async (tx) => {
+      await tx
         .update(battle)
         .set({ status: "cancelled" })
         .where(eq(battle.id, data.id));
-    } catch (err) {
-      console.error(err);
-      invalid((err as Error).message);
-      return;
-    }
+
+      // Set all stages to closed
+      for (const s of existing.stages) {
+        await tx
+          .update(stage)
+          .set({ phase: "closed" })
+          .where(eq(stage.id, s.id));
+      }
+    });
 
     redirect(302, "/home");
   },
