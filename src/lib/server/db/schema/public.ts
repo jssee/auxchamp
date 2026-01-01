@@ -4,6 +4,8 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
+  json,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import {
@@ -14,6 +16,9 @@ import {
 import * as v from "valibot";
 
 import { user } from "./auth";
+
+/** Reference to a scheduled QStash job for cancel/reschedule on edits */
+export type QStashJobRef = { action: string; messageId: string };
 
 export const battle = pgTable("battle", {
   id: text("id").primaryKey(),
@@ -30,6 +35,8 @@ export const battle = pgTable("battle", {
   inviteCode: text(),
   currentStageId: text(),
   createdAt: timestamp().defaultNow().notNull(),
+  authoritativeTimezone: text().notNull(),
+  stagesCount: integer().default(0).notNull(),
 });
 export const battleSelectSchema = createSelectSchema(battle);
 export const battleUpdateSchema = createUpdateSchema(battle);
@@ -47,18 +54,27 @@ export const player = pgTable("player", {
   stagesWon: integer(),
 });
 
-export const stage = pgTable("stage", {
-  id: text("id").primaryKey(),
-  battleId: text().notNull(),
-  stageNumber: integer(),
-  vibe: text(),
-  description: text(),
-  submissionDeadline: integer(),
-  votingDeadline: integer(),
-  phase: text({ enum: ["pending", "submission", "voting", "completed"] }),
-  playlistUrl: text(),
-  spotifyPlaylistId: text(),
-});
+export const stage = pgTable(
+  "stage",
+  {
+    id: text("id").primaryKey(),
+    battleId: text().notNull(),
+    stageNumber: integer().notNull(),
+    title: text().notNull(),
+    description: text(),
+    submissionDeadline: timestamp().notNull(),
+    votingDeadline: timestamp().notNull(),
+    phase: text({ enum: ["upcoming", "submission", "voting", "closed"] })
+      .default("upcoming")
+      .notNull(),
+    playlistUrl: text(),
+    spotifyPlaylistId: text(),
+    jobIds: json("job_ids").$type<QStashJobRef[]>(),
+  },
+  (t) => ({
+    unq: unique().on(t.battleId, t.stageNumber),
+  }),
+);
 
 export const submission = pgTable("submission", {
   id: text("id").primaryKey(),

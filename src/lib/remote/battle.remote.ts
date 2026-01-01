@@ -3,15 +3,44 @@ import { eq, or, and, exists } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 
+import { env } from "$env/dynamic/private";
 import { form, query, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
-import { battle, player, battleInsertSchema } from "$lib/server/db/schema";
+import {
+  battle,
+  player,
+  stage,
+  battleInsertSchema,
+  type QStashJobRef,
+} from "$lib/server/db/schema";
+import { qstash } from "$lib/server/qstash";
 import { booleanFromForm } from "$lib/utils";
+
+// Stage schema for form input
+const stageFormSchema = v.object({
+  title: v.pipe(v.string(), v.minLength(1, "Stage title is required")),
+  submissionDeadline: v.pipe(
+    v.string(),
+    v.minLength(1, "Submission deadline is required"),
+  ),
+  votingDeadline: v.pipe(
+    v.string(),
+    v.minLength(1, "Voting deadline is required"),
+  ),
+});
 
 // Form schema: derives from drizzle schema, adds form coercion for boolean fields
 const battleFormSchema = v.object({
   ...v.pick(battleInsertSchema, ["name", "visibility", "maxPlayers"]).entries,
   doubleSubmissions: booleanFromForm,
+  authoritativeTimezone: v.pipe(
+    v.string(),
+    v.minLength(1, "Timezone is required"),
+  ),
+  stages: v.pipe(
+    v.array(stageFormSchema),
+    v.minLength(1, "At least one stage is required"),
+  ),
 });
 
 // GET: User's battles (created + joined)
@@ -46,27 +75,177 @@ export const getBattle = query(v.string(), async (id) => {
   return result;
 });
 
+// Minimum time between submission and voting deadlines (5 minutes)
+const MIN_DEADLINE_GAP_MS = 5 * 60 * 1000;
+
 // POST: Create battle
 export const createBattle = form(battleFormSchema, async (data, invalid) => {
-  const { locals } = getRequestEvent();
+  const { locals, request } = getRequestEvent();
   if (!locals.user) error(401, "Not authenticated");
 
-  const id = nanoid(8);
+  const { stages: stageInputs, authoritativeTimezone, ...battleData } = data;
+
+  // Validate and convert stage deadlines
+  const parsedStages: {
+    title: string;
+    submissionDeadline: Date;
+    votingDeadline: Date;
+  }[] = [];
+
+  for (let i = 0; i < stageInputs.length; i++) {
+    const stageInput = stageInputs[i];
+    const submissionDeadline = new Date(stageInput.submissionDeadline);
+    const votingDeadline = new Date(stageInput.votingDeadline);
+
+    // Validate dates are parseable
+    if (isNaN(submissionDeadline.getTime())) {
+      invalid(`Stage ${i + 1}: Invalid submission deadline`);
+      return;
+    }
+    if (isNaN(votingDeadline.getTime())) {
+      invalid(`Stage ${i + 1}: Invalid voting deadline`);
+      return;
+    }
+
+    // Validate submissionDeadline < votingDeadline
+    if (submissionDeadline >= votingDeadline) {
+      invalid(
+        `Stage ${i + 1}: Submission deadline must be before voting deadline`,
+      );
+      return;
+    }
+
+    // Validate minimum 5 minute gap
+    if (
+      votingDeadline.getTime() - submissionDeadline.getTime() <
+      MIN_DEADLINE_GAP_MS
+    ) {
+      invalid(
+        `Stage ${i + 1}: At least 5 minutes required between submission and voting deadlines`,
+      );
+      return;
+    }
+
+    // Validate stage ordering: previous votingDeadline <= this submissionDeadline
+    if (i > 0) {
+      const prevVotingDeadline = parsedStages[i - 1].votingDeadline;
+      if (prevVotingDeadline > submissionDeadline) {
+        invalid(
+          `Stage ${i + 1}: Submission deadline must be at or after previous stage's voting deadline`,
+        );
+        return;
+      }
+    }
+
+    parsedStages.push({
+      title: stageInput.title,
+      submissionDeadline,
+      votingDeadline,
+    });
+  }
+
+  const battleId = nanoid(8);
+  const stageIds = parsedStages.map(() => nanoid(8));
+
+  // Get base URL for QStash callbacks
+  const baseUrl = env.PUBLIC_BASE_URL || new URL(request.url).origin;
 
   try {
+    // Insert battle
     await db.insert(battle).values({
-      id,
-      ...data,
+      id: battleId,
+      ...battleData,
+      authoritativeTimezone,
+      stagesCount: parsedStages.length,
+      currentStageId: stageIds[0],
       creatorId: locals.user.id,
       status: "draft",
     });
+
+    // Insert stages and schedule QStash jobs
+    for (let i = 0; i < parsedStages.length; i++) {
+      const stageData = parsedStages[i];
+      const stageId = stageIds[i];
+      const stageNumber = i + 1;
+      const isLastStage = i === parsedStages.length - 1;
+
+      const jobIds: QStashJobRef[] = [];
+
+      // Schedule voting_open at submissionDeadline
+      const votingOpenJob = await qstash.publishJSON({
+        url: `${baseUrl}/api/qstash/stage-transition`,
+        notBefore: Math.floor(stageData.submissionDeadline.getTime() / 1000),
+        body: {
+          battleId,
+          stageId,
+          stageNumber,
+          action: "voting_open",
+          expectedDeadline: stageData.submissionDeadline.toISOString(),
+          idempotencyHash: crypto.randomUUID(),
+        },
+      });
+      jobIds.push({
+        action: "voting_open",
+        messageId: votingOpenJob.messageId,
+      });
+
+      // Schedule stage_closed at votingDeadline
+      const stageClosedJob = await qstash.publishJSON({
+        url: `${baseUrl}/api/qstash/stage-transition`,
+        notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
+        body: {
+          battleId,
+          stageId,
+          stageNumber,
+          action: "stage_closed",
+          expectedDeadline: stageData.votingDeadline.toISOString(),
+          idempotencyHash: crypto.randomUUID(),
+        },
+      });
+      jobIds.push({
+        action: "stage_closed",
+        messageId: stageClosedJob.messageId,
+      });
+
+      // For last stage, also schedule battle_completed
+      if (isLastStage) {
+        const battleCompletedJob = await qstash.publishJSON({
+          url: `${baseUrl}/api/qstash/stage-transition`,
+          notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
+          body: {
+            battleId,
+            stageId,
+            stageNumber,
+            action: "battle_completed",
+            expectedDeadline: stageData.votingDeadline.toISOString(),
+            idempotencyHash: crypto.randomUUID(),
+          },
+        });
+        jobIds.push({
+          action: "battle_completed",
+          messageId: battleCompletedJob.messageId,
+        });
+      }
+
+      // Insert stage
+      await db.insert(stage).values({
+        id: stageId,
+        battleId,
+        stageNumber,
+        title: stageData.title,
+        submissionDeadline: stageData.submissionDeadline,
+        votingDeadline: stageData.votingDeadline,
+        phase: "upcoming",
+        jobIds,
+      });
+    }
   } catch (err) {
     console.error(err);
     invalid((err as Error).message);
     return;
   }
 
-  redirect(302, `/b/${id}`);
+  redirect(302, `/b/${battleId}`);
 });
 
 // Update schema: partial version of form schema + required id
