@@ -4,6 +4,7 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
+  import { DateTimePicker } from "$lib/components/ui/datetime-picker";
   import { createBattle } from "$lib/remote/battle.remote";
 
   type StageInput = {
@@ -127,20 +128,20 @@
           <div class="grid grid-cols-2 gap-4">
             <Field.Field>
               <Field.Label>Submission Deadline</Field.Label>
-              <Input
-                type="datetime-local"
+              <DateTimePicker
                 name="stages[{i}].submissionDeadline"
                 bind:value={stage.submissionDeadline}
+                placeholder="Submissions close..."
                 required
               />
             </Field.Field>
 
             <Field.Field>
               <Field.Label>Voting Deadline</Field.Label>
-              <Input
-                type="datetime-local"
+              <DateTimePicker
                 name="stages[{i}].votingDeadline"
                 bind:value={stage.votingDeadline}
+                placeholder="Voting closes..."
                 required
               />
             </Field.Field>
