@@ -29,6 +29,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^24",
+    "@types/ws": "^8.18.1",
     "bits-ui": "^2.14.4",
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.31.5",
@@ -58,7 +59,8 @@
     "mode-watcher": "^1.1.0",
     "nanoid": "^5.1.6",
     "runed": "^0.37.0",
-    "valibot": "^1.1.0"
+    "valibot": "^1.1.0",
+    "ws": "^8.18.3"
   },
   "prettier": {
     "plugins": [
