@@ -35,6 +35,10 @@
 </script>
 
 <form {...createBattle}>
+  {#each createBattle.fields.allIssues() as issue}
+    <Field.Error>{issue.message}</Field.Error>
+  {/each}
+
   <Field.Set>
     <Field.Legend>Create Battle</Field.Legend>
     <Field.Separator />
