@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import * as v from "valibot";
 
 import { env } from "$env/dynamic/private";
+import { dev } from "$app/environment";
 import { form, query, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
 import {
@@ -171,60 +172,63 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
 
       const jobIds: QStashJobRef[] = [];
 
-      // Schedule voting_open at submissionDeadline
-      const votingOpenJob = await qstash.publishJSON({
-        url: `${baseUrl}/api/qstash/stage-transition`,
-        notBefore: Math.floor(stageData.submissionDeadline.getTime() / 1000),
-        body: {
-          battleId,
-          stageId,
-          stageNumber,
+      // Skip QStash scheduling in dev mode (can't reach localhost)
+      if (!dev) {
+        // Schedule voting_open at submissionDeadline
+        const votingOpenJob = await qstash.publishJSON({
+          url: `${baseUrl}/api/qstash/stage-transition`,
+          notBefore: Math.floor(stageData.submissionDeadline.getTime() / 1000),
+          body: {
+            battleId,
+            stageId,
+            stageNumber,
+            action: "voting_open",
+            expectedDeadline: stageData.submissionDeadline.toISOString(),
+            idempotencyHash: crypto.randomUUID(),
+          },
+        });
+        jobIds.push({
           action: "voting_open",
-          expectedDeadline: stageData.submissionDeadline.toISOString(),
-          idempotencyHash: crypto.randomUUID(),
-        },
-      });
-      jobIds.push({
-        action: "voting_open",
-        messageId: votingOpenJob.messageId,
-      });
+          messageId: votingOpenJob.messageId,
+        });
 
-      // Schedule stage_closed at votingDeadline
-      const stageClosedJob = await qstash.publishJSON({
-        url: `${baseUrl}/api/qstash/stage-transition`,
-        notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
-        body: {
-          battleId,
-          stageId,
-          stageNumber,
-          action: "stage_closed",
-          expectedDeadline: stageData.votingDeadline.toISOString(),
-          idempotencyHash: crypto.randomUUID(),
-        },
-      });
-      jobIds.push({
-        action: "stage_closed",
-        messageId: stageClosedJob.messageId,
-      });
-
-      // For last stage, also schedule battle_completed
-      if (isLastStage) {
-        const battleCompletedJob = await qstash.publishJSON({
+        // Schedule stage_closed at votingDeadline
+        const stageClosedJob = await qstash.publishJSON({
           url: `${baseUrl}/api/qstash/stage-transition`,
           notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
           body: {
             battleId,
             stageId,
             stageNumber,
-            action: "battle_completed",
+            action: "stage_closed",
             expectedDeadline: stageData.votingDeadline.toISOString(),
             idempotencyHash: crypto.randomUUID(),
           },
         });
         jobIds.push({
-          action: "battle_completed",
-          messageId: battleCompletedJob.messageId,
+          action: "stage_closed",
+          messageId: stageClosedJob.messageId,
         });
+
+        // For last stage, also schedule battle_completed
+        if (isLastStage) {
+          const battleCompletedJob = await qstash.publishJSON({
+            url: `${baseUrl}/api/qstash/stage-transition`,
+            notBefore: Math.floor(stageData.votingDeadline.getTime() / 1000),
+            body: {
+              battleId,
+              stageId,
+              stageNumber,
+              action: "battle_completed",
+              expectedDeadline: stageData.votingDeadline.toISOString(),
+              idempotencyHash: crypto.randomUUID(),
+            },
+          });
+          jobIds.push({
+            action: "battle_completed",
+            messageId: battleCompletedJob.messageId,
+          });
+        }
       }
 
       // Insert stage
