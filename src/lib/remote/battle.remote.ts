@@ -18,7 +18,7 @@ import { booleanFromForm } from "$lib/utils";
 
 // Stage schema for form input
 const stageFormSchema = v.object({
-  title: v.pipe(v.string(), v.minLength(1, "Stage title is required")),
+  vibe: v.pipe(v.string(), v.minLength(1, "Stage vibe is required")),
   submissionDeadline: v.pipe(
     v.string(),
     v.minLength(1, "Submission deadline is required"),
@@ -138,7 +138,7 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
     }
 
     parsedStages.push({
-      title: stageInput.title,
+      vibe: stageInput.vibe,
       submissionDeadline,
       votingDeadline,
     });
@@ -232,7 +232,7 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
         id: stageId,
         battleId,
         stageNumber,
-        title: stageData.title,
+        vibe: stageData.vibe,
         submissionDeadline: stageData.submissionDeadline,
         votingDeadline: stageData.votingDeadline,
         phase: "upcoming",

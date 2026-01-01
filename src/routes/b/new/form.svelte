@@ -8,7 +8,7 @@
   import { createBattle } from "$lib/remote/battle.remote";
 
   type StageInput = {
-    title: string;
+    vibe: string;
     submissionDeadline: string;
     votingDeadline: string;
   };
@@ -19,13 +19,13 @@
   let doubleSubmissions = $state(false);
 
   let stages = $state<StageInput[]>([
-    { title: "", submissionDeadline: "", votingDeadline: "" },
+    { vibe: "", submissionDeadline: "", votingDeadline: "" },
   ]);
 
   function addStage() {
     stages = [
       ...stages,
-      { title: "", submissionDeadline: "", votingDeadline: "" },
+      { vibe: "", submissionDeadline: "", votingDeadline: "" },
     ];
   }
 
@@ -121,8 +121,8 @@
           </div>
 
           <Field.Field>
-            <Field.Label>Title</Field.Label>
-            <Input name="stages[{i}].title" bind:value={stage.title} required />
+            <Field.Label>Vibe</Field.Label>
+            <Input name="stages[{i}].vibe" bind:value={stage.vibe} required />
           </Field.Field>
 
           <div class="grid grid-cols-2 gap-4">

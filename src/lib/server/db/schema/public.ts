@@ -60,7 +60,7 @@ export const stage = pgTable(
     id: text("id").primaryKey(),
     battleId: text().notNull(),
     stageNumber: integer().notNull(),
-    title: text().notNull(),
+    vibe: text().notNull(),
     description: text(),
     submissionDeadline: timestamp().notNull(),
     votingDeadline: timestamp().notNull(),

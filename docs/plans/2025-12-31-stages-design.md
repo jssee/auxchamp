@@ -14,11 +14,11 @@ Stages are ordered children of a battle. Each stage has a vibe (title), descript
 
 ## Schema Changes (proposed)
 
-| Entity      | Change                                                                                                                                                                                                                          | Rationale                                            |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| battle      | Add `authoritativeTimezone` (IANA), `status` enum, optional `stagesCount`. Keep `doubleSubmissions`, `currentStageId` (stored).                                                                                                 | Needed to express intended wall times and summaries. |
-| stage       | Require `stageNumber`, `title`, `submissionDeadline`, `votingDeadline`. Add `phase` enum, `qstashJobIds` (JSON). Use `bigint`/`timestamp` for deadlines. Enforce unique `(battleId, stageNumber)`. Worker owns `phase` updates. | Prevents ambiguity (ms vs s) and ordering conflicts. |
-| Constraints | For stage _n_: `submissionDeadline < votingDeadline`. Sequencing: `votingDeadline(n) <= submissionDeadline(n+1)` with zero-gap allowed (UI can warn when gap is very short). Monotonic by `stageNumber`.                        | Guarantees non-overlapping, ordered windows.         |
+| Entity      | Change                                                                                                                                                                                                                         | Rationale                                            |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| battle      | Add `authoritativeTimezone` (IANA), `status` enum, optional `stagesCount`. Keep `doubleSubmissions`, `currentStageId` (stored).                                                                                                | Needed to express intended wall times and summaries. |
+| stage       | Require `stageNumber`, `vibe`, `submissionDeadline`, `votingDeadline`. Add `phase` enum, `qstashJobIds` (JSON). Use `bigint`/`timestamp` for deadlines. Enforce unique `(battleId, stageNumber)`. Worker owns `phase` updates. | Prevents ambiguity (ms vs s) and ordering conflicts. |
+| Constraints | For stage _n_: `submissionDeadline < votingDeadline`. Sequencing: `votingDeadline(n) <= submissionDeadline(n+1)` with zero-gap allowed (UI can warn when gap is very short). Monotonic by `stageNumber`.                       | Guarantees non-overlapping, ordered windows.         |
 
 ### Enums
 
