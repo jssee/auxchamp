@@ -15,6 +15,7 @@ import {
 } from "$lib/server/db/schema";
 import { scheduleStageTransition, cancelJob } from "$lib/server/qstash";
 import { booleanFromForm } from "$lib/utils";
+import { isValidTimeZone, parseDateTimeInZone } from "$lib/utils/time";
 
 // Stage schema for form input
 const stageFormSchema = v.object({
@@ -85,24 +86,35 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
 
   const { stages: stageInputs, authoritativeTimezone, ...battleData } = data;
 
+  if (!isValidTimeZone(authoritativeTimezone)) {
+    invalid("Timezone is invalid");
+    return;
+  }
+
   // Validate and convert stage deadlines
   const parsedStages: {
-    title: string;
+    vibe: string;
     submissionDeadline: Date;
     votingDeadline: Date;
   }[] = [];
 
   for (let i = 0; i < stageInputs.length; i++) {
     const stageInput = stageInputs[i];
-    const submissionDeadline = new Date(stageInput.submissionDeadline);
-    const votingDeadline = new Date(stageInput.votingDeadline);
+    const submissionDeadline = parseDateTimeInZone(
+      stageInput.submissionDeadline,
+      authoritativeTimezone,
+    );
+    const votingDeadline = parseDateTimeInZone(
+      stageInput.votingDeadline,
+      authoritativeTimezone,
+    );
 
     // Validate dates are parseable
-    if (isNaN(submissionDeadline.getTime())) {
+    if (!submissionDeadline) {
       invalid(`Stage ${i + 1}: Invalid submission deadline`);
       return;
     }
-    if (isNaN(votingDeadline.getTime())) {
+    if (!votingDeadline) {
       invalid(`Stage ${i + 1}: Invalid voting deadline`);
       return;
     }
