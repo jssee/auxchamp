@@ -159,7 +159,7 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
       stagesCount: parsedStages.length,
       currentStageId: stageIds[0],
       creatorId: locals.user.id,
-      status: "draft",
+      status: "active",
     });
 
     // Insert stages and schedule QStash jobs
