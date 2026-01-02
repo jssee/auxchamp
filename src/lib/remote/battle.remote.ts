@@ -1,5 +1,5 @@
 import { error, redirect } from "@sveltejs/kit";
-import { eq, or, and, exists } from "drizzle-orm";
+import { eq, or, and, exists, ne } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 
@@ -50,19 +50,22 @@ export const getBattles = query(async () => {
   if (!locals.user) error(401, "Not authenticated");
 
   return db.query.battle.findMany({
-    where: or(
-      eq(battle.creatorId, locals.user.id),
-      exists(
-        db
-          .select()
-          .from(player)
-          .where(
-            and(
-              eq(player.battleId, battle.id),
-              eq(player.userId, locals.user.id),
+    where: and(
+      or(
+        eq(battle.creatorId, locals.user.id),
+        exists(
+          db
+            .select()
+            .from(player)
+            .where(
+              and(
+                eq(player.battleId, battle.id),
+                eq(player.userId, locals.user.id),
+              ),
             ),
-          ),
+        ),
       ),
+      ne(battle.status, "cancelled"),
     ),
   });
 });
