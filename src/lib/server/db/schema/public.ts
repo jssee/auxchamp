@@ -84,6 +84,7 @@ export const submission = pgTable("submission", {
   submissionOrder: integer(),
   submittedAt: integer(),
   starsReceived: integer(),
+  note: text(),
 });
 
 export const star = pgTable("star", {

@@ -43,6 +43,13 @@
       "when": 1767297090961,
       "tag": "0005_right_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767852813060,
+      "tag": "0006_glorious_nick_fury",
+      "breakpoints": true
     }
   ]
 }
