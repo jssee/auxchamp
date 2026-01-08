@@ -1,17 +1,11 @@
 import { error } from "@sveltejs/kit";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import * as v from "valibot";
 
 import { form, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
 import { battle, stage, submission, star } from "$lib/server/db/schema";
-
-const submitSchema = v.object({
-  stageId: v.string(),
-  spotifyUrl: v.pipe(v.string(), v.url()),
-  note: v.optional(v.pipe(v.string(), v.maxLength(280))),
-});
+import { submitSchema, voteSchema } from "$lib/schemas/stage";
 
 export const submitTrack = form(submitSchema, async (data, invalid) => {
   const { locals } = getRequestEvent();
@@ -68,11 +62,6 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
   });
 
   return { success: true };
-});
-
-const voteSchema = v.object({
-  stageId: v.string(),
-  submissionId: v.string(),
 });
 
 export const castVote = form(voteSchema, async (data, invalid) => {
