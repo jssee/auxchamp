@@ -10,6 +10,7 @@ import { battle, stage, submission, star } from "$lib/server/db/schema";
 const submitSchema = v.object({
   stageId: v.string(),
   spotifyUrl: v.pipe(v.string(), v.url()),
+  note: v.optional(v.pipe(v.string(), v.maxLength(280))),
 });
 
 export const submitTrack = form(submitSchema, async (data, invalid) => {
@@ -63,6 +64,7 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
     spotifyUrl: data.spotifyUrl,
     submissionOrder: existingSubmissions.length + 1,
     submittedAt: Math.floor(Date.now() / 1000),
+    note: data.note || null,
   });
 
   return { success: true };
