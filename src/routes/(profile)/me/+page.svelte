@@ -1,5 +1,5 @@
 <script lang="ts">
-  import PasswordForm from "$lib/components/auth/password-form.svelte";
+  import PasswordForm from "./components/update-password-form.svelte";
   import ProfileForm from "./components/profile-form.svelte";
   import DeleteAccountForm from "./components/delete-account-form.svelte";
   import type { PageProps } from "./$types";
