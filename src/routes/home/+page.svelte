@@ -1,13 +1,15 @@
 <script lang="ts">
+  import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import { getBattles } from "$lib/remote/battle.remote";
-  import * as Card from "$lib/components/ui/card";
   import * as Empty from "$lib/components/ui/empty";
+  import * as Item from "$lib/components/ui/item";
   import { Button } from "$lib/components/ui/button";
+  import { Spinner } from "$lib/components/ui/spinner";
 </script>
 
 <main class="col-content">
   <header class="mb-6 flex items-center justify-between">
-    <h1 class="text-2xl font-bold">My Battles</h1>
+    <h1 class="text-lg font-medium">Battles</h1>
     <Button href="/b/new">New Battle</Button>
   </header>
 
@@ -25,24 +27,33 @@
         </Empty.Content>
       </Empty.Root>
     {:else}
-      <div class="grid gap-4">
+      <div class="flex flex-col gap-2">
         {#each battles as battle}
-          <a href="/b/{battle.id}">
-            <Card.Root>
-              <Card.Header>
-                <Card.Title>{battle.name}</Card.Title>
-                <Card.Description
-                  >{battle.visibility} · {battle.status}</Card.Description
-                >
-              </Card.Header>
-            </Card.Root>
-          </a>
+          <Item.Root>
+            {#snippet child({ props })}
+              <a href="/b/{battle.id}" {...props}>
+                <Item.Content>
+                  <Item.Title>{battle.name}</Item.Title>
+                  <Item.Description>
+                    {battle.status}
+                  </Item.Description>
+                </Item.Content>
+                <Item.Actions>
+                  <ChevronRight class="size-4" />
+                </Item.Actions>
+              </a>
+            {/snippet}
+          </Item.Root>
         {/each}
       </div>
     {/if}
 
     {#snippet pending()}
-      <div class="animate-pulse">Loading battles...</div>
+      <Empty.Root>
+        <Empty.Content>
+          <Spinner />
+        </Empty.Content>
+      </Empty.Root>
     {/snippet}
 
     {#snippet failed(error: unknown, reset: () => void)}
