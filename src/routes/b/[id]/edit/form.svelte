@@ -95,6 +95,42 @@
   </Field.Set>
 </form>
 
+<!-- Invite Link section -->
+{#if battle.inviteCode}
+  <div class="mt-8">
+    <Field.Set>
+      <Field.Legend>Invite Link</Field.Legend>
+      <Field.Description>Share this link to invite players to your battle.</Field.Description>
+      <Field.Separator />
+      <Field.Group>
+        <Field.Field orientation="responsive">
+          <Field.Content>
+            <Field.Label>Link</Field.Label>
+          </Field.Content>
+          <div class="flex gap-2">
+            <Input
+              readonly
+              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${battle.inviteCode}`}
+              class="font-mono text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onclick={() => {
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/invite/${battle.inviteCode}`
+                );
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+        </Field.Field>
+      </Field.Group>
+    </Field.Set>
+  </div>
+{/if}
+
 <!-- Delete form (separate) -->
 <form {...cancelBattle} class="mt-8">
   <Field.Set>
