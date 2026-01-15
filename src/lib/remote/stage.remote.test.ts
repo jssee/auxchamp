@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as v from "valibot";
-import { submitSchema } from "$lib/schemas/stage";
+import { submitSchema, castVotesSchema } from "$lib/schemas/stage";
 
 describe("submitSchema", () => {
   it("accepts valid submission with URL only", () => {
@@ -69,6 +69,52 @@ describe("submitSchema", () => {
   it("requires spotifyUrl", () => {
     const result = v.safeParse(submitSchema, {
       stageId: "abc123",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("castVotesSchema", () => {
+  it("accepts valid vote with exactly 3 submission IDs", () => {
+    const result = v.safeParse(castVotesSchema, {
+      stageId: "stage123",
+      submissionIds: ["sub1", "sub2", "sub3"],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects fewer than 3 submission IDs", () => {
+    const result = v.safeParse(castVotesSchema, {
+      stageId: "stage123",
+      submissionIds: ["sub1", "sub2"],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects more than 3 submission IDs", () => {
+    const result = v.safeParse(castVotesSchema, {
+      stageId: "stage123",
+      submissionIds: ["sub1", "sub2", "sub3", "sub4"],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate submission IDs", () => {
+    const result = v.safeParse(castVotesSchema, {
+      stageId: "stage123",
+      submissionIds: ["sub1", "sub1", "sub2"],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("requires stageId", () => {
+    const result = v.safeParse(castVotesSchema, {
+      submissionIds: ["sub1", "sub2", "sub3"],
     });
 
     expect(result.success).toBe(false);
