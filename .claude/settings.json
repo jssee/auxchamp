@@ -1,5 +1,13 @@
 {
   "enabledPlugins": {
     "superpowers@superpowers-dev": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "command": ".claude/hooks/branch-guard.sh $TOOL_NAME",
+        "timeout": 2000
+      }
+    ]
   }
 }
