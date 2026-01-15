@@ -26,30 +26,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   const isFull = playerCount >= result.maxPlayers;
 
-  // Not logged in
-  if (!locals.user) {
-    return {
-      battle: { id: result.id, name: result.name },
-      isPlayer: false,
-      isFull,
-    };
-  }
+  // Redirect existing players directly to battle
+  if (locals.user) {
+    const existingPlayer = await db.query.player.findFirst({
+      where: and(
+        eq(player.battleId, result.id),
+        eq(player.userId, locals.user.id),
+      ),
+    });
 
-  // Check if already a player
-  const existingPlayer = await db.query.player.findFirst({
-    where: and(
-      eq(player.battleId, result.id),
-      eq(player.userId, locals.user.id),
-    ),
-  });
-
-  if (existingPlayer) {
-    redirect(302, `/b/${result.id}`);
+    if (existingPlayer) {
+      redirect(302, `/b/${result.id}`);
+    }
   }
 
   return {
     battle: { id: result.id, name: result.name },
-    isPlayer: false,
     isFull,
     user: locals.user,
   };

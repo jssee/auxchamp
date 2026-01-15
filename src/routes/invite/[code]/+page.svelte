@@ -14,25 +14,18 @@
 <main class="col-content grid h-full place-items-center">
   <Card.Root class="w-full max-w-md">
     {#if "error" in data}
+      {@const isInvalid = data.error === "invalid"}
       <Card.Header>
         <Card.Title class="text-xl">
-          {#if data.error === "invalid"}
-            Invalid Invite
-          {:else}
-            Battle Closed
-          {/if}
+          {isInvalid ? "Invalid Invite" : "Battle Closed"}
         </Card.Title>
       </Card.Header>
       <Card.Content>
-        {#if data.error === "invalid"}
-          <p class="text-muted-foreground">
-            This invite link is invalid or has expired.
-          </p>
-        {:else}
-          <p class="text-muted-foreground">
-            This battle is no longer accepting new players.
-          </p>
-        {/if}
+        <p class="text-muted-foreground">
+          {isInvalid
+            ? "This invite link is invalid or has expired."
+            : "This battle is no longer accepting new players."}
+        </p>
       </Card.Content>
       <Card.Footer>
         <Button href="/" variant="outline">Go Home</Button>

@@ -96,8 +96,8 @@
   </Field.Set>
 </form>
 
-<!-- Invite Link section -->
 {#if battle.inviteCode}
+  {@const inviteUrl = `/invite/${battle.inviteCode}`}
   <div class="mt-8">
     <Field.Set>
       <Field.Legend>Invite Link</Field.Legend>
@@ -109,23 +109,17 @@
             <Field.Label>Link</Field.Label>
           </Field.Content>
           <div class="flex gap-2">
-            <Input
-              readonly
-              value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${battle.inviteCode}`}
-              class="font-mono text-sm"
-            />
+            <Input readonly value={inviteUrl} class="font-mono text-sm" />
             <Button
               type="button"
               variant="outline"
               onclick={async () => {
                 try {
-                  await navigator.clipboard.writeText(
-                    `${window.location.origin}/invite/${battle.inviteCode}`
-                  );
+                  await navigator.clipboard.writeText(window.location.origin + inviteUrl);
                   copied = true;
                   setTimeout(() => (copied = false), 2000);
                 } catch {
-                  // Clipboard API failed - fail silently
+                  // Clipboard API not available
                 }
               }}
             >
