@@ -11,6 +11,7 @@
 
   let visibility = $state(battle.visibility);
   let doubleSubmissions = $state(battle.doubleSubmissions);
+  let copied = $state(false);
 </script>
 
 <!-- Update form -->
@@ -120,9 +121,11 @@
                 navigator.clipboard.writeText(
                   `${window.location.origin}/invite/${battle.inviteCode}`
                 );
+                copied = true;
+                setTimeout(() => (copied = false), 2000);
               }}
             >
-              Copy
+              {copied ? "Copied!" : "Copy"}
             </Button>
           </div>
         </Field.Field>
