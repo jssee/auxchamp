@@ -117,12 +117,16 @@
             <Button
               type="button"
               variant="outline"
-              onclick={() => {
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/invite/${battle.inviteCode}`
-                );
-                copied = true;
-                setTimeout(() => (copied = false), 2000);
+              onclick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    `${window.location.origin}/invite/${battle.inviteCode}`
+                  );
+                  copied = true;
+                  setTimeout(() => (copied = false), 2000);
+                } catch {
+                  // Clipboard API failed - fail silently
+                }
               }}
             >
               {copied ? "Copied!" : "Copy"}
