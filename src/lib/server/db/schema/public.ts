@@ -95,6 +95,15 @@ export const star = pgTable("star", {
   votedAt: integer(),
 });
 
+export const spotifyCredentials = pgTable("spotify_credentials", {
+  id: text("id").primaryKey().default("service"),
+  accessToken: text().notNull(),
+  refreshToken: text().notNull(),
+  expiresAt: timestamp().notNull(),
+  createdAt: timestamp().defaultNow(),
+  updatedAt: timestamp().defaultNow(),
+});
+
 // Relations
 export const battleRelations = relations(battle, ({ one, many }) => ({
   creator: one(user, {
