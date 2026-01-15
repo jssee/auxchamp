@@ -80,6 +80,9 @@
       </Card.Content>
       <Card.Footer>
         <form {...joinBattle}>
+          {#each joinBattle.fields.allIssues() as issue}
+            <p class="text-sm text-red-500">{issue.message}</p>
+          {/each}
           <input type="hidden" name="battleId" value={data.battle.id} />
           <Button type="submit">Join Battle</Button>
         </form>
