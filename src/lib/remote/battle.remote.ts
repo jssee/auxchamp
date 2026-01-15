@@ -211,7 +211,7 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
 
       const jobIds = jobs.filter((j): j is QStashJobRef => j !== null);
 
-      // Insert stage
+      // Insert stage (first stage starts in submission phase)
       await db.insert(stage).values({
         id: stageId,
         battleId,
@@ -219,7 +219,7 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
         vibe: stageData.vibe,
         submissionDeadline: stageData.submissionDeadline,
         votingDeadline: stageData.votingDeadline,
-        phase: "upcoming",
+        phase: i === 0 ? "submission" : "upcoming",
         jobIds,
       });
     }
