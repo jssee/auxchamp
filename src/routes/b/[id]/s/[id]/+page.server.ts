@@ -2,7 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { eq, and } from "drizzle-orm";
 
 import { db } from "$lib/server/db";
-import { stage, submission, player } from "$lib/server/db/schema";
+import { stage, submission, player, star } from "$lib/server/db/schema";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -46,8 +46,75 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       })
     : [];
 
-  const maxSubmissions = currentStage.battle.doubleSubmissions ? 2 : 1;
+  // Voting eligibility
+  const userVotes = await db.query.star.findMany({
+    where: and(eq(star.stageId, params.id), eq(star.voterId, locals.user.id)),
+  });
+
+  const hasVoted = userVotes.length > 0;
+  const votedSubmissionIds = userVotes.map((v) => v.submissionId);
+
+  const submissionCount = otherSubmissions.length;
+  const votableSubmissions = otherSubmissions.filter(
+    (s) => s.userId !== locals.user!.id,
+  );
+
   const now = new Date();
+  const inVotingPhase =
+    currentStage.phase === "voting" ||
+    (now >= currentStage.submissionDeadline &&
+      now < currentStage.votingDeadline);
+
+  const canVote =
+    inVotingPhase &&
+    !hasVoted &&
+    submissionCount >= 4 &&
+    votableSubmissions.length >= 3;
+
+  // Vote results (only if user voted or stage closed)
+  let voteResults: Array<{
+    submission: (typeof otherSubmissions)[0];
+    starsReceived: number;
+    rank: number;
+    voters: Array<{ id: string; name: string | null }>;
+  }> = [];
+
+  if (hasVoted || currentStage.phase === "closed") {
+    const allStars = await db.query.star.findMany({
+      where: eq(star.stageId, params.id),
+      with: { voter: true },
+    });
+
+    const starsBySubmission = new Map<string, typeof allStars>();
+    for (const s of allStars) {
+      const existing = starsBySubmission.get(s.submissionId) || [];
+      existing.push(s);
+      starsBySubmission.set(s.submissionId, existing);
+    }
+
+    const ranked = otherSubmissions
+      .map((sub) => ({
+        submission: sub,
+        starsReceived: sub.starsReceived || 0,
+        voters: (starsBySubmission.get(sub.id) || []).map((s) => ({
+          id: s.voter.id,
+          name: s.voter.name,
+        })),
+      }))
+      .sort((a, b) => b.starsReceived - a.starsReceived);
+
+    let currentRank = 1;
+    let previousStars = -1;
+    voteResults = ranked.map((item, index) => {
+      if (item.starsReceived !== previousStars) {
+        currentRank = index + 1;
+        previousStars = item.starsReceived;
+      }
+      return { ...item, rank: currentRank };
+    });
+  }
+
+  const maxSubmissions = currentStage.battle.doubleSubmissions ? 2 : 1;
   const canSubmit =
     currentStage.phase === "submission" &&
     now < currentStage.submissionDeadline &&
@@ -68,5 +135,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     user: locals.user,
     isCreator,
     canCreatePlaylist,
+    // Voting data
+    hasVoted,
+    votedSubmissionIds,
+    canVote,
+    voteResults,
+    votableSubmissions,
   };
 };
