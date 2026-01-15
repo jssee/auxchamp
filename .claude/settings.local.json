@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(tk:*)",
+      "Bash(tree:*)",
+      "Skill(superpowers:brainstorming)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(bun run format:*)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}
