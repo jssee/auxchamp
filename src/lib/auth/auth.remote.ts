@@ -38,8 +38,9 @@ export const signUp = form(
       invalid(err.body.message);
     }
     const redirectTo = url.searchParams.get("redirectTo");
+    const safeRedirect = redirectTo?.startsWith("/") ? redirectTo : "/home";
 
-    redirect(302, redirectTo ?? "/home");
+    redirect(302, safeRedirect);
   },
 );
 
@@ -54,8 +55,9 @@ export const signOut = form(async () => {
     return error(500, { message: "Something went wrong" });
   }
   const redirectTo = url.searchParams.get("redirectTo");
+  const safeRedirect = redirectTo?.startsWith("/") ? redirectTo : "/";
 
-  redirect(302, redirectTo ?? "/");
+  redirect(302, safeRedirect);
 });
 
 export const signIn = form(
@@ -77,8 +79,9 @@ export const signIn = form(
       invalid(err.body.message);
     }
     const redirectTo = url.searchParams.get("redirectTo");
+    const safeRedirect = redirectTo?.startsWith("/") ? redirectTo : "/home";
 
-    redirect(302, redirectTo ?? "/home");
+    redirect(302, safeRedirect);
   },
 );
 
