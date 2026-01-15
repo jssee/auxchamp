@@ -1,10 +1,107 @@
 import { Receiver } from "@upstash/qstash";
+import { nanoid } from "nanoid";
 import { env } from "$env/dynamic/private";
 import { db } from "$lib/server/db";
-import { battle, stage } from "$lib/server/db/schema";
+import {
+  battle,
+  stage,
+  submission,
+  player,
+  userStats,
+} from "$lib/server/db/schema";
 import { createStagePlaylist } from "$lib/server/spotify";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { RequestHandler } from "./$types";
+
+async function tallyStageResults(stageId: string, battleId: string) {
+  // Get all submissions with their star counts
+  const submissions = await db.query.submission.findMany({
+    where: eq(submission.stageId, stageId),
+  });
+
+  if (submissions.length === 0) return;
+
+  // Rank submissions
+  const ranked = submissions
+    .map((s) => ({ ...s, stars: s.starsReceived || 0 }))
+    .sort((a, b) => b.stars - a.stars);
+
+  // Find winner(s) - submissions with rank 1
+  const topStars = ranked[0]?.stars || 0;
+  const winners = ranked.filter((s) => s.stars === topStars && topStars > 0);
+
+  // Get all players in the battle
+  const players = await db.query.player.findMany({
+    where: eq(player.battleId, battleId),
+  });
+
+  // Update player stats
+  for (const p of players) {
+    // Calculate total stars earned by this player in the battle
+    const allBattleStages = await db.query.stage.findMany({
+      where: eq(stage.battleId, battleId),
+    });
+    const stageIds = allBattleStages.map((s) => s.id);
+
+    const playerSubmissions = await db.query.submission.findMany({
+      where: and(
+        eq(submission.userId, p.userId),
+        sql`${submission.stageId} IN (${sql.join(
+          stageIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`,
+      ),
+    });
+
+    const totalStars = playerSubmissions.reduce(
+      (sum, s) => sum + (s.starsReceived || 0),
+      0,
+    );
+
+    // Check if player won this stage
+    const wonThisStage = winners.some((w) => w.userId === p.userId);
+
+    // Update player record
+    await db
+      .update(player)
+      .set({
+        totalStarsEarned: totalStars,
+        stagesWon: wonThisStage
+          ? sql`COALESCE(${player.stagesWon}, 0) + 1`
+          : player.stagesWon,
+      })
+      .where(eq(player.id, p.id));
+
+    // Update or create userStats
+    const starsFromThisStage = playerSubmissions
+      .filter((s) => s.stageId === stageId)
+      .reduce((sum, s) => sum + (s.starsReceived || 0), 0);
+
+    await db
+      .insert(userStats)
+      .values({
+        id: nanoid(8),
+        userId: p.userId,
+        lifetimeStarsEarned: starsFromThisStage,
+        lifetimeStagesWon: wonThisStage ? 1 : 0,
+        battlesCompleted: 0,
+      })
+      .onConflictDoUpdate({
+        target: userStats.userId,
+        set: {
+          lifetimeStarsEarned: sql`${userStats.lifetimeStarsEarned} + ${starsFromThisStage}`,
+          lifetimeStagesWon: wonThisStage
+            ? sql`${userStats.lifetimeStagesWon} + 1`
+            : userStats.lifetimeStagesWon,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  console.log(
+    `Tallied results for stage ${stageId}: ${winners.length} winner(s) with ${topStars} stars`,
+  );
+}
 
 type StageTransitionPayload = {
   battleId: string;
@@ -153,6 +250,10 @@ export const POST: RequestHandler = async ({ request }) => {
           );
           return new Response("OK", { status: 200 });
         }
+
+        // Tally results before closing
+        await tallyStageResults(payload.stageId, payload.battleId);
+
         await db
           .update(stage)
           .set({ phase: "closed" })
@@ -181,6 +282,31 @@ export const POST: RequestHandler = async ({ request }) => {
 
       case "battle_completed": {
         // Idempotency handled by guard: non-active battles (including completed) already returned
+
+        // Increment battlesCompleted for all players
+        const players = await db.query.player.findMany({
+          where: eq(player.battleId, payload.battleId),
+        });
+
+        for (const p of players) {
+          await db
+            .insert(userStats)
+            .values({
+              id: nanoid(8),
+              userId: p.userId,
+              lifetimeStarsEarned: 0,
+              lifetimeStagesWon: 0,
+              battlesCompleted: 1,
+            })
+            .onConflictDoUpdate({
+              target: userStats.userId,
+              set: {
+                battlesCompleted: sql`${userStats.battlesCompleted} + 1`,
+                updatedAt: new Date(),
+              },
+            });
+        }
+
         await db
           .update(battle)
           .set({ status: "completed" })
