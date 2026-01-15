@@ -1,15 +1,23 @@
 <script lang="ts">
+  import Star from "@lucide/svelte/icons/star";
   import * as Card from "$lib/components/ui/card";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Textarea } from "$lib/components/ui/textarea";
   import * as Field from "$lib/components/ui/field";
-  import { submitTrack, createPlaylist } from "$lib/remote/stage.remote";
+  import {
+    submitTrack,
+    createPlaylist,
+    castVotes,
+  } from "$lib/remote/stage.remote";
   import type { PageProps } from "./$types";
 
   let creatingPlaylist = $state(false);
   let playlistError = $state<string | null>(null);
+  let selectedSubmissions = $state<Set<string>>(new Set());
+  let votingError = $state<string | null>(null);
+  let submittingVotes = $state(false);
 
   async function handleCreatePlaylist(stageId: string) {
     creatingPlaylist = true;
@@ -20,9 +28,41 @@
         window.location.reload();
       }
     } catch (err) {
-      playlistError = err instanceof Error ? err.message : "Failed to create playlist";
+      playlistError =
+        err instanceof Error ? err.message : "Failed to create playlist";
     } finally {
       creatingPlaylist = false;
+    }
+  }
+
+  function toggleSelection(submissionId: string) {
+    const newSet = new Set(selectedSubmissions);
+    if (newSet.has(submissionId)) {
+      newSet.delete(submissionId);
+    } else if (newSet.size < 3) {
+      newSet.add(submissionId);
+    }
+    selectedSubmissions = newSet;
+  }
+
+  async function handleSubmitVotes() {
+    if (selectedSubmissions.size !== 3) return;
+
+    submittingVotes = true;
+    votingError = null;
+    try {
+      const result = await castVotes({
+        stageId: data.stage.id,
+        submissionIds: Array.from(selectedSubmissions),
+      });
+      if (result.success) {
+        window.location.reload();
+      }
+    } catch (err) {
+      votingError =
+        err instanceof Error ? err.message : "Failed to submit votes";
+    } finally {
+      submittingVotes = false;
     }
   }
 
@@ -46,14 +86,20 @@
     voting: "outline",
     closed: "destructive",
   } as const;
+
+  function getRankLabel(rank: number): string {
+    if (rank === 1) return "1st";
+    if (rank === 2) return "2nd";
+    if (rank === 3) return "3rd";
+    return `${rank}th`;
+  }
 </script>
 
 <main class="col-content space-y-6">
   <Card.Root>
     <Card.Header>
       <div class="flex items-center justify-between">
-        <Card.Title
-          >Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title
+        <Card.Title>Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title
         >
         <Badge variant={phaseVariant[data.stage.phase]}
           >{data.stage.phase}</Badge
@@ -179,7 +225,152 @@
     </Card.Root>
   {/if}
 
-  {#if data.otherSubmissions.length > 0}
+  {#if data.canVote}
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>Cast Your Votes</Card.Title>
+        <Card.Description>
+          Select 3 submissions to award your stars ({selectedSubmissions.size}/3
+          selected)
+        </Card.Description>
+      </Card.Header>
+      <Card.Content class="space-y-4">
+        {#each data.votableSubmissions as sub}
+          {@const trackId = sub.spotifyUrl
+            ? extractTrackId(sub.spotifyUrl)
+            : null}
+          {@const isSelected = selectedSubmissions.has(sub.id)}
+          <button
+            type="button"
+            class="w-full text-left space-y-2 p-3 rounded-lg border-2 transition-colors {isSelected
+              ? 'border-primary bg-primary/5'
+              : 'border-transparent hover:border-muted'}"
+            onclick={() => toggleSelection(sub.id)}
+          >
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-medium">{sub.user.name}</p>
+              <Star
+                class="size-5 {isSelected
+                  ? 'fill-primary text-primary'
+                  : 'text-muted-foreground'}"
+              />
+            </div>
+            {#if trackId}
+              <iframe
+                title="Spotify embed"
+                src="https://open.spotify.com/embed/track/{trackId}"
+                width="100%"
+                height="80"
+                allow="encrypted-media"
+                style="border-radius: 12px; pointer-events: none;"
+              ></iframe>
+            {:else}
+              <p class="text-sm text-muted-foreground">{sub.spotifyUrl}</p>
+            {/if}
+            {#if sub.note}
+              <p class="text-sm text-muted-foreground">{sub.note}</p>
+            {/if}
+          </button>
+        {/each}
+      </Card.Content>
+      <Card.Footer class="flex-col items-start gap-2">
+        <Button
+          onclick={handleSubmitVotes}
+          disabled={selectedSubmissions.size !== 3 || submittingVotes}
+        >
+          {submittingVotes ? "Submitting..." : "Submit Votes"}
+        </Button>
+        {#if votingError}
+          <p class="text-sm text-destructive">{votingError}</p>
+        {/if}
+      </Card.Footer>
+    </Card.Root>
+  {:else if data.stage.phase === "voting" && data.otherSubmissions.length < 4}
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>Voting Unavailable</Card.Title>
+        <Card.Description>
+          Not enough submissions for voting (minimum 4 required)
+        </Card.Description>
+      </Card.Header>
+    </Card.Root>
+  {/if}
+
+  {#if data.hasVoted || data.stage.phase === "closed"}
+    {#if data.voteResults.length > 0}
+      <Card.Root>
+        <Card.Header>
+          <Card.Title>Results</Card.Title>
+          {#if data.hasVoted && data.stage.phase !== "closed"}
+            <Card.Description
+              >You voted! Results will be final when voting closes.</Card.Description
+            >
+          {/if}
+        </Card.Header>
+        <Card.Content class="space-y-6">
+          {#each data.voteResults as result}
+            {@const trackId = result.submission.spotifyUrl
+              ? extractTrackId(result.submission.spotifyUrl)
+              : null}
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <Badge variant={result.rank === 1 ? "default" : "secondary"}>
+                  {getRankLabel(result.rank)}
+                </Badge>
+                <span class="text-sm font-medium"
+                  >{result.submission.user.name}</span
+                >
+                <span class="text-sm text-muted-foreground ml-auto">
+                  {result.starsReceived} star{result.starsReceived !== 1
+                    ? "s"
+                    : ""}
+                </span>
+              </div>
+              {#if trackId}
+                <iframe
+                  title="Spotify embed"
+                  src="https://open.spotify.com/embed/track/{trackId}"
+                  width="100%"
+                  height="80"
+                  allow="encrypted-media"
+                  style="border-radius: 12px"
+                ></iframe>
+              {:else}
+                <p class="text-sm text-muted-foreground">
+                  {result.submission.spotifyUrl}
+                </p>
+              {/if}
+              {#if result.submission.note}
+                <p class="text-sm text-muted-foreground">
+                  {result.submission.note}
+                </p>
+              {/if}
+              {#if result.voters.length > 0}
+                <div
+                  class="flex items-center gap-1 text-xs text-muted-foreground"
+                >
+                  <span>Voted by:</span>
+                  {#each result.voters as voter, i}
+                    <span
+                      >{voter.name}{i < result.voters.length - 1 ? "," : ""}</span
+                    >
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </Card.Content>
+        <Card.Footer>
+          <a
+            href="/b/{data.battle.id}/s/{data.stage.id}/results"
+            class="text-sm text-primary hover:underline"
+          >
+            View Full Results
+          </a>
+        </Card.Footer>
+      </Card.Root>
+    {/if}
+  {:else if data.otherSubmissions.length > 0 && !data.canVote && data.stage.phase !== "submission"}
     <Card.Root>
       <Card.Header>
         <Card.Title>All Submissions</Card.Title>
