@@ -1,0 +1,149 @@
+name: Scheduled - Code Quality Review
+
+on:
+  schedule:
+    # Run every Sunday at 8 AM UTC
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+    inputs:
+      num_dirs:
+        description: 'Number of random directories to review'
+        required: false
+        default: '3'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  select-directories:
+    runs-on: ubuntu-latest
+    outputs:
+      directories: ${{ steps.select.outputs.directories }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select random directories
+        id: select
+        run: |
+          NUM_DIRS="${{ github.event.inputs.num_dirs || '3' }}"
+
+          # Find directories in src that have TS/Svelte files (excluding tests)
+          DIRS=$(find src -type d -exec sh -c 'ls "$1"/*.ts "$1"/*.svelte 2>/dev/null | grep -v -E "\.(test|spec)\." | head -1' _ {} \; 2>/dev/null | \
+            xargs -I {} dirname {} | \
+            sort -u | \
+            shuf -n "$NUM_DIRS")
+
+          if [ -z "$DIRS" ]; then
+            echo "No suitable directories found"
+            echo "directories=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Convert to JSON array
+          JSON_DIRS=$(echo "$DIRS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "directories=$JSON_DIRS" >> $GITHUB_OUTPUT
+          echo "Selected directories:"
+          echo "$DIRS"
+
+  review-directory:
+    needs: select-directories
+    if: needs.select-directories.outputs.directories != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        directory: ${{ fromJson(needs.select-directories.outputs.directories) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Claude Code Quality Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-20250514
+          timeout_minutes: 30
+          base_branch: main
+          branch_prefix: claude/code-quality-
+          track_progress: true
+          prompt: |
+            # Weekly Code Quality Review
+
+            You are performing a scheduled code quality review of a specific directory.
+
+            ## Target Directory
+            **Review: `${{ matrix.directory }}`**
+
+            ## Your Tasks
+
+            1. **Read CLAUDE.md** for project conventions and patterns
+
+            2. **Analyze all files in the directory**:
+               - List all .ts and .svelte files (excluding .test., .spec.)
+               - Read each file thoroughly
+
+            3. **Focus on finding and FIXING issues**:
+               - TypeScript strict mode violations (any types, missing types)
+               - Svelte 5 anti-patterns (should use runes: $state, $derived, $props)
+               - Remote functions pattern violations (should not use +page.server.ts actions)
+               - Valibot usage (not Zod)
+               - Code style issues (mutations, deep nesting, poor naming)
+               - Missing error handling
+
+            4. **Make the fixes yourself**:
+               - Don't just report issues - FIX THEM
+               - Use Edit tool to update files
+               - Ensure fixes don't break anything
+
+            5. **Run verification**:
+               - `bun run check` - verify no type errors introduced
+               - `bun run lint` - verify formatting
+               - If errors occur, fix them or revert changes
+
+            6. **Create PR if fixes were made**:
+               - Create a branch from main
+               - Commit all fixes with descriptive message
+               - PR title: "fix(${{ matrix.directory }}): code quality improvements"
+               - PR body should list fixes applied
+
+            ## Guidelines
+            - Be thorough but focused on this directory only
+            - Fix issues that are clear improvements
+            - Don't refactor working code just for style
+            - If no issues found, report that and skip PR creation
+          claude_args: |
+            --max-turns 25
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(bun run check*),Bash(bun run lint*),Bash(bun run format*)"
+
+  report-completion:
+    needs: [select-directories, review-directory]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Code Quality Review Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Reviewed directories:" >> $GITHUB_STEP_SUMMARY
+          echo '${{ needs.select-directories.outputs.directories }}' | jq -r '.[]' | while read dir; do
+            echo "- \`$dir\`" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check for any PRs created by this workflow." >> $GITHUB_STEP_SUMMARY
