@@ -1,0 +1,89 @@
+<script lang="ts">
+  import { page } from "$app/state";
+  import * as Card from "$lib/components/ui/card";
+  import { Button } from "$lib/components/ui/button";
+  import { joinBattle } from "$lib/remote/invite.remote";
+  import type { PageProps } from "./$types";
+
+  let { data }: PageProps = $props();
+
+  const redirectTo = $derived(`/invite/${page.params.code}`);
+</script>
+
+<main class="col-content grid h-full place-items-center">
+  <Card.Root class="w-full max-w-md">
+    {#if "error" in data}
+      <Card.Header>
+        <Card.Title class="text-xl">
+          {#if data.error === "invalid"}
+            Invalid Invite
+          {:else}
+            Battle Closed
+          {/if}
+        </Card.Title>
+      </Card.Header>
+      <Card.Content>
+        {#if data.error === "invalid"}
+          <p class="text-muted-foreground">
+            This invite link is invalid or has expired.
+          </p>
+        {:else}
+          <p class="text-muted-foreground">
+            This battle is no longer accepting new players.
+          </p>
+        {/if}
+      </Card.Content>
+      <Card.Footer>
+        <Button href="/" variant="outline">Go Home</Button>
+      </Card.Footer>
+    {:else if data.isFull}
+      <Card.Header>
+        <Card.Title class="text-xl">Battle Full</Card.Title>
+      </Card.Header>
+      <Card.Content>
+        <p class="text-muted-foreground">
+          <strong>{data.battle.name}</strong> has reached its player limit.
+        </p>
+      </Card.Content>
+      <Card.Footer>
+        <Button href="/" variant="outline">Go Home</Button>
+      </Card.Footer>
+    {:else if !data.user}
+      <Card.Header>
+        <Card.Title class="text-xl">Join Battle</Card.Title>
+      </Card.Header>
+      <Card.Content>
+        <p class="text-muted-foreground">
+          You've been invited to join <strong>{data.battle.name}</strong>.
+        </p>
+        <p class="mt-2 text-muted-foreground">Sign in or create an account to join.</p>
+      </Card.Content>
+      <Card.Footer class="flex gap-2">
+        <Button href="/signin?redirectTo={encodeURIComponent(redirectTo)}">
+          Sign In
+        </Button>
+        <Button
+          href="/signup?redirectTo={encodeURIComponent(redirectTo)}"
+          variant="outline"
+        >
+          Sign Up
+        </Button>
+      </Card.Footer>
+    {:else}
+      <Card.Header>
+        <Card.Title class="text-xl">Join Battle</Card.Title>
+      </Card.Header>
+      <Card.Content>
+        <p class="text-muted-foreground">
+          You've been invited to join <strong>{data.battle.name}</strong>.
+        </p>
+      </Card.Content>
+      <Card.Footer>
+        <form {...joinBattle}>
+          <input type="hidden" name="battleId" value={data.battle.id} />
+          <Button type="submit">Join Battle</Button>
+        </form>
+      </Card.Footer>
+    {/if}
+  </Card.Root>
+</main>
