@@ -2,10 +2,11 @@ import { error } from "@sveltejs/kit";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { form, getRequestEvent } from "$app/server";
+import { command, form, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
 import { battle, stage, submission, star } from "$lib/server/db/schema";
-import { submitSchema, voteSchema } from "$lib/schemas/stage";
+import { createStagePlaylist } from "$lib/server/spotify";
+import { submitSchema, voteSchema, createPlaylistSchema } from "$lib/schemas/stage";
 
 export const submitTrack = form(submitSchema, async (data, invalid) => {
   const { locals } = getRequestEvent();
@@ -133,4 +134,39 @@ export const castVote = form(voteSchema, async (data, invalid) => {
   });
 
   return { success: true };
+});
+
+export const createPlaylist = command(createPlaylistSchema, async (data) => {
+  const { locals } = getRequestEvent();
+  if (!locals.user) error(401, "Not authenticated");
+
+  const currentStage = await db.query.stage.findFirst({
+    where: eq(stage.id, data.stageId),
+    with: { battle: true },
+  });
+
+  if (!currentStage) error(404, "Stage not found");
+
+  // Only battle creator can manually create playlist
+  if (currentStage.battle.creatorId !== locals.user.id) {
+    error(403, "Only battle creator can create playlist");
+  }
+
+  // Battle must be active
+  if (currentStage.battle.status !== "active") {
+    error(400, "Battle is not active");
+  }
+
+  // Only allow during submission phase (before automatic creation)
+  if (currentStage.phase !== "submission") {
+    error(400, "Playlist can only be created during submission phase");
+  }
+
+  const result = await createStagePlaylist(data.stageId);
+
+  if (!result) {
+    error(400, "No submissions to create playlist from");
+  }
+
+  return { playlistUrl: result.playlistUrl };
 });

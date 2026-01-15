@@ -10,3 +10,7 @@ export const voteSchema = v.object({
   stageId: v.string(),
   submissionId: v.string(),
 });
+
+export const createPlaylistSchema = v.object({
+  stageId: v.string(),
+});
