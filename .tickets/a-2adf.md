@@ -1,6 +1,6 @@
 ---
 id: a-2adf
-status: open
+status: closed
 deps: [a-1af3, a-e65f]
 links: []
 created: 2026-01-15T04:35:24Z

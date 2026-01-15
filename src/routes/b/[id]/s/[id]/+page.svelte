@@ -5,8 +5,26 @@
   import { Input } from "$lib/components/ui/input";
   import { Textarea } from "$lib/components/ui/textarea";
   import * as Field from "$lib/components/ui/field";
-  import { submitTrack } from "$lib/remote/stage.remote";
+  import { submitTrack, createPlaylist } from "$lib/remote/stage.remote";
   import type { PageProps } from "./$types";
+
+  let creatingPlaylist = $state(false);
+  let playlistError = $state<string | null>(null);
+
+  async function handleCreatePlaylist(stageId: string) {
+    creatingPlaylist = true;
+    playlistError = null;
+    try {
+      const result = await createPlaylist({ stageId });
+      if (result.playlistUrl) {
+        window.location.reload();
+      }
+    } catch (err) {
+      playlistError = err instanceof Error ? err.message : "Failed to create playlist";
+    } finally {
+      creatingPlaylist = false;
+    }
+  }
 
   let { data }: PageProps = $props();
 
@@ -57,6 +75,31 @@
         </div>
       </dl>
     </Card.Content>
+    {#if data.stage.playlistUrl}
+      <Card.Footer>
+        <a
+          href={data.stage.playlistUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-sm text-primary hover:underline"
+        >
+          Listen to Stage Playlist on Spotify
+        </a>
+      </Card.Footer>
+    {:else if data.canCreatePlaylist}
+      <Card.Footer class="flex-col items-start gap-2">
+        <Button
+          variant="outline"
+          onclick={() => handleCreatePlaylist(data.stage.id)}
+          disabled={creatingPlaylist}
+        >
+          {creatingPlaylist ? "Creating..." : "Create Playlist Early"}
+        </Button>
+        {#if playlistError}
+          <p class="text-sm text-destructive">{playlistError}</p>
+        {/if}
+      </Card.Footer>
+    {/if}
   </Card.Root>
 
   {#if data.canSubmit}

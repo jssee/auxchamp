@@ -53,6 +53,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     now < currentStage.submissionDeadline &&
     userSubmissions.length < maxSubmissions;
 
+  const canCreatePlaylist =
+    isCreator &&
+    currentStage.phase === "submission" &&
+    !currentStage.spotifyPlaylistId;
+
   return {
     stage: currentStage,
     battle: currentStage.battle,
@@ -61,5 +66,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     canSubmit,
     maxSubmissions,
     user: locals.user,
+    isCreator,
+    canCreatePlaylist,
   };
 };

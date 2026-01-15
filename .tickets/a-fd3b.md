@@ -1,6 +1,6 @@
 ---
 id: a-fd3b
-status: open
+status: closed
 deps: [a-b7bb]
 links: []
 created: 2026-01-15T04:35:14Z

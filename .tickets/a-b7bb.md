@@ -1,6 +1,6 @@
 ---
 id: a-b7bb
-status: open
+status: closed
 deps: [a-e65f]
 links: []
 created: 2026-01-15T04:35:05Z

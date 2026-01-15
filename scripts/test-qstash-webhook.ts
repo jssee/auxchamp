@@ -43,22 +43,24 @@ async function hashBody(body: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(body);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  // Base64url encode (no padding)
+  const base64 = Buffer.from(hashBuffer).toString("base64url");
+  return base64;
 }
 
 async function main() {
   const args = process.argv.slice(2);
 
-  if (args.length < 2) {
-    console.log("Usage: bun scripts/test-qstash-webhook.ts <action> <stageId> [battleId]");
+  if (args.length < 3) {
+    console.log("Usage: bun scripts/test-qstash-webhook.ts <action> <stageId> <battleId> [stageNumber]");
     console.log("Actions: voting_open, stage_closed, battle_completed, submission_open");
     process.exit(1);
   }
 
   const action = args[0] as StageAction;
   const stageId = args[1];
-  const battleId = args[2] || "test-battle";
+  const battleId = args[2];
+  const stageNumber = parseInt(args[3] || "1", 10);
 
   const signingKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
   if (!signingKey) {
@@ -70,7 +72,7 @@ async function main() {
   const payload = {
     battleId,
     stageId,
-    stageNumber: 1,
+    stageNumber,
     action,
     expectedDeadline: new Date().toISOString(),
     idempotencyHash: crypto.randomUUID(),
