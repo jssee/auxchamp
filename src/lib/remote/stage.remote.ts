@@ -1,12 +1,17 @@
 import { error } from "@sveltejs/kit";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { command, form, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
 import { battle, stage, submission, star } from "$lib/server/db/schema";
 import { createStagePlaylist } from "$lib/server/spotify";
-import { submitSchema, voteSchema, createPlaylistSchema } from "$lib/schemas/stage";
+import {
+  submitSchema,
+  voteSchema,
+  castVotesSchema,
+  createPlaylistSchema,
+} from "$lib/schemas/stage";
 
 export const submitTrack = form(submitSchema, async (data, invalid) => {
   const { locals } = getRequestEvent();
@@ -131,6 +136,102 @@ export const castVote = form(voteSchema, async (data, invalid) => {
     voterId: locals.user.id,
     submissionId: data.submissionId,
     votedAt: Math.floor(Date.now() / 1000),
+  });
+
+  return { success: true };
+});
+
+export const castVotes = form(castVotesSchema, async (data, invalid) => {
+  const { locals } = getRequestEvent();
+  if (!locals.user) error(401, "Not authenticated");
+
+  const currentStage = await db.query.stage.findFirst({
+    where: eq(stage.id, data.stageId),
+    with: { battle: true },
+  });
+
+  if (!currentStage) error(404, "Stage not found");
+
+  if (currentStage.battle.status !== "active") {
+    invalid("Battle is not active");
+    return;
+  }
+
+  if (currentStage.battle.currentStageId !== currentStage.id) {
+    invalid("This stage is not active");
+    return;
+  }
+
+  const now = new Date();
+  if (now < currentStage.submissionDeadline) {
+    invalid("Voting has not started yet");
+    return;
+  }
+  if (now >= currentStage.votingDeadline) {
+    invalid("Voting deadline has passed");
+    return;
+  }
+
+  // Check minimum submissions (4 required)
+  const allSubmissions = await db.query.submission.findMany({
+    where: eq(submission.stageId, data.stageId),
+  });
+
+  if (allSubmissions.length < 4) {
+    invalid("Not enough submissions for voting");
+    return;
+  }
+
+  // Verify all submissions exist and none are user's own
+  const targetSubmissions = allSubmissions.filter((s) =>
+    data.submissionIds.includes(s.id),
+  );
+
+  if (targetSubmissions.length !== 3) {
+    invalid("One or more submissions not found");
+    return;
+  }
+
+  const ownSubmission = targetSubmissions.find(
+    (s) => s.userId === locals.user!.id,
+  );
+  if (ownSubmission) {
+    invalid("Cannot vote for your own submission");
+    return;
+  }
+
+  // Check if already voted
+  const existingVotes = await db.query.star.findFirst({
+    where: and(
+      eq(star.stageId, data.stageId),
+      eq(star.voterId, locals.user.id),
+    ),
+  });
+
+  if (existingVotes) {
+    invalid("You have already voted in this stage");
+    return;
+  }
+
+  // Insert all 3 votes atomically
+  const votedAt = Math.floor(Date.now() / 1000);
+  await db.transaction(async (tx) => {
+    for (const submissionId of data.submissionIds) {
+      await tx.insert(star).values({
+        id: nanoid(8),
+        stageId: data.stageId,
+        voterId: locals.user!.id,
+        submissionId,
+        votedAt,
+      });
+
+      await tx
+        .update(submission)
+        .set({
+          starsReceived: sql`COALESCE(${submission.starsReceived}, 0) + 1`,
+        })
+        .where(eq(submission.id, submissionId));
+    }
   });
 
   return { success: true };
