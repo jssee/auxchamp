@@ -34,8 +34,12 @@
   <Card.Root>
     <Card.Header>
       <div class="flex items-center justify-between">
-        <Card.Title>Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title>
-        <Badge variant={phaseVariant[data.stage.phase]}>{data.stage.phase}</Badge>
+        <Card.Title
+          >Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title
+        >
+        <Badge variant={phaseVariant[data.stage.phase]}
+          >{data.stage.phase}</Badge
+        >
       </div>
       {#if data.stage.description}
         <Card.Description>{data.stage.description}</Card.Description>
@@ -60,7 +64,10 @@
       <Card.Header>
         <Card.Title>Submit a Track</Card.Title>
         <Card.Description>
-          {data.userSubmissions.length} of {data.maxSubmissions} submission{data.maxSubmissions > 1 ? "s" : ""} used
+          {data.userSubmissions.length} of {data.maxSubmissions} submission{data.maxSubmissions >
+          1
+            ? "s"
+            : ""} used
         </Card.Description>
       </Card.Header>
       <Card.Content>
@@ -104,7 +111,9 @@
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.userSubmissions as sub}
-          {@const trackId = sub.spotifyUrl ? extractTrackId(sub.spotifyUrl) : null}
+          {@const trackId = sub.spotifyUrl
+            ? extractTrackId(sub.spotifyUrl)
+            : null}
           <div class="space-y-2">
             {#if trackId}
               <iframe
@@ -134,7 +143,9 @@
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.otherSubmissions as sub}
-          {@const trackId = sub.spotifyUrl ? extractTrackId(sub.spotifyUrl) : null}
+          {@const trackId = sub.spotifyUrl
+            ? extractTrackId(sub.spotifyUrl)
+            : null}
           <div class="space-y-2">
             <p class="text-sm font-medium">{sub.user.name}</p>
             {#if trackId}

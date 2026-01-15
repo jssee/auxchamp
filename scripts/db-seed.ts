@@ -105,7 +105,9 @@ for (const config of battleConfigs) {
     if (config.status === "completed") {
       // All stages closed for completed battles
       phase = "closed";
-      submissionDeadline = new Date(now.getTime() - (config.stageCount - i) * 7 * day);
+      submissionDeadline = new Date(
+        now.getTime() - (config.stageCount - i) * 7 * day,
+      );
       votingDeadline = new Date(submissionDeadline.getTime() + 2 * day);
     } else if (config.status === "draft") {
       // All stages upcoming for draft battles
@@ -120,11 +122,15 @@ for (const config of battleConfigs) {
         votingDeadline = new Date(submissionDeadline.getTime() + 2 * day);
       } else if (i < stageIds.indexOf(currentStageId!)) {
         phase = "closed";
-        submissionDeadline = new Date(now.getTime() - (stageIds.indexOf(currentStageId!) - i) * 7 * day);
+        submissionDeadline = new Date(
+          now.getTime() - (stageIds.indexOf(currentStageId!) - i) * 7 * day,
+        );
         votingDeadline = new Date(submissionDeadline.getTime() + 2 * day);
       } else {
         phase = "upcoming";
-        submissionDeadline = new Date(now.getTime() + (i - stageIds.indexOf(currentStageId!) + 1) * 7 * day);
+        submissionDeadline = new Date(
+          now.getTime() + (i - stageIds.indexOf(currentStageId!) + 1) * 7 * day,
+        );
         votingDeadline = new Date(submissionDeadline.getTime() + 2 * day);
       }
     }
@@ -146,4 +152,6 @@ for (const config of battleConfigs) {
 await pool.end();
 
 console.log("Database seeded for user:", userId);
-console.log(`Created ${battleConfigs.length} battles with ${battleConfigs.reduce((a, b) => a + b.stageCount, 0)} stages`);
+console.log(
+  `Created ${battleConfigs.length} battles with ${battleConfigs.reduce((a, b) => a + b.stageCount, 0)} stages`,
+);

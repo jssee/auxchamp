@@ -3,6 +3,7 @@
 @import "tw-animate-css";
 
 @import "@fontsource-variable/unbounded/wght.css";
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -112,6 +113,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --font-display: "Unbounded Variable", sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", sans-serif;
 }
 
 @layer base {
@@ -135,7 +137,7 @@
 }
 @layer components {
   .grid-layout {
-    --grid-col-w: minmax(auto, calc(var(--spacing) * 10));
+    --grid-col-w: minmax(auto, calc(var(--spacing) * 18));
     --grid-gap-min: calc(var(--spacing) * 1);
     --grid-gap-max: calc(var(--spacing) * 3);
 

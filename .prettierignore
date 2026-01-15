@@ -9,5 +9,4 @@ bun.lockb
 /static/
 /drizzle/
 
-# Beads
-/.beads/
+/.tickets/

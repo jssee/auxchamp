@@ -1,73 +1,52 @@
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
+  import ChevronRight from "@lucide/svelte/icons/chevron-right";
+  import * as Item from "$lib/components/ui/item";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
-
-  const phaseVariant = {
-    upcoming: "secondary",
-    submission: "default",
-    voting: "outline",
-    closed: "destructive",
-  } as const;
 </script>
 
 <main class="col-content space-y-6">
-  <Card.Root>
-    <Card.Header>
-      <Card.Title>{data.battle.name}</Card.Title>
-      <Card.Description>
-        {data.battle.visibility} · {data.battle.status}
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
-      <dl class="grid gap-2 text-sm">
-        <div class="flex justify-between">
-          <dt class="text-muted-foreground">Max players</dt>
-          <dd>{data.battle.maxPlayers}</dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-muted-foreground">Double submissions</dt>
-          <dd>{data.battle.doubleSubmissions ? "Yes" : "No"}</dd>
-        </div>
-        <div class="flex justify-between">
-          <dt class="text-muted-foreground">Created</dt>
-          <dd>{new Date(data.battle.createdAt).toLocaleDateString()}</dd>
-        </div>
-      </dl>
-    </Card.Content>
-    <Card.Footer>
-      {#if data.battle.creatorId === data.user?.id && data.battle.status !== "cancelled"}
-        <Button href="/b/{data.battle.id}/edit">Edit</Button>
-      {/if}
-    </Card.Footer>
-  </Card.Root>
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="font-display font-bold uppercase">{data.battle.name}</h1>
+      <Badge variant="secondary">{data.battle.visibility}</Badge>
+      <Badge variant="secondary">Players: {data.battle.maxPlayers}</Badge>
+      <Badge variant="secondary">{data.battle.status}</Badge>
+    </div>
+    {#if data.battle.creatorId === data.user?.id && data.battle.status !== "cancelled"}
+      <Button href="/b/{data.battle.id}/edit">Edit</Button>
+    {/if}
+  </div>
 
   {#if data.stages.length > 0}
-    <Card.Root>
-      <Card.Header>
-        <Card.Title>Stages</Card.Title>
-      </Card.Header>
-      <Card.Content>
-        <ul class="space-y-2">
-          {#each data.stages as stage}
-            <li>
-              <a
-                href="/b/{data.battle.id}/s/{stage.id}"
-                class="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors"
+    <ul class="space-y-2">
+      {#each data.stages as stage}
+        <Item.Root>
+          {#snippet child({ props })}
+            <a href="/b/{data.battle.id}/s/{stage.id}" {...props}>
+              <Item.Media
+                class="size-10 rounded-md bg-muted font-display text-sm font-bold"
               >
-                <div>
-                  <span class="font-medium">Stage {stage.stageNumber}:</span>
-                  <span class="text-muted-foreground ml-1">{stage.vibe}</span>
-                </div>
-                <Badge variant={phaseVariant[stage.phase]}>{stage.phase}</Badge>
-              </a>
-            </li>
-          {/each}
-        </ul>
-      </Card.Content>
-    </Card.Root>
+                {stage.stageNumber}
+              </Item.Media>
+              <Item.Content>
+                <Item.Title>
+                  {stage.vibe}
+                </Item.Title>
+                <Item.Description>
+                  {stage.phase}
+                </Item.Description>
+              </Item.Content>
+              <Item.Actions>
+                <ChevronRight class="size-4" />
+              </Item.Actions>
+            </a>
+          {/snippet}
+        </Item.Root>
+      {/each}
+    </ul>
   {/if}
 </main>
