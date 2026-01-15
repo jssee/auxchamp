@@ -2,6 +2,7 @@ import { Receiver } from "@upstash/qstash";
 import { env } from "$env/dynamic/private";
 import { db } from "$lib/server/db";
 import { battle, stage } from "$lib/server/db/schema";
+import { createStagePlaylist } from "$lib/server/spotify";
 import { eq } from "drizzle-orm";
 import type { RequestHandler } from "./$types";
 
@@ -114,6 +115,26 @@ export const POST: RequestHandler = async ({ request }) => {
           );
           return new Response("OK", { status: 200 });
         }
+
+        // Create Spotify playlist before opening voting
+        try {
+          const result = await createStagePlaylist(payload.stageId);
+          if (result) {
+            console.log(
+              `Created playlist for stage ${payload.stageNumber}: ${result.playlistUrl}`,
+            );
+          } else {
+            console.log(
+              `No playlist created for stage ${payload.stageNumber} (no submissions)`,
+            );
+          }
+        } catch (playlistErr) {
+          console.error(
+            `Failed to create playlist for stage ${payload.stageNumber}:`,
+            playlistErr,
+          );
+        }
+
         await db
           .update(stage)
           .set({ phase: "voting" })
