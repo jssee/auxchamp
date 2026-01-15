@@ -87,13 +87,19 @@ export const submission = pgTable("submission", {
   note: text(),
 });
 
-export const star = pgTable("star", {
-  id: text("id").primaryKey(),
-  stageId: text().notNull(),
-  voterId: text().notNull(),
-  submissionId: text().notNull(),
-  votedAt: integer(),
-});
+export const star = pgTable(
+  "star",
+  {
+    id: text("id").primaryKey(),
+    stageId: text().notNull(),
+    voterId: text().notNull(),
+    submissionId: text().notNull(),
+    votedAt: integer(),
+  },
+  (t) => ({
+    uniqueVote: unique().on(t.stageId, t.voterId, t.submissionId),
+  }),
+);
 
 export const spotifyCredentials = pgTable("spotify_credentials", {
   id: text("id").primaryKey().default("service"),
@@ -102,6 +108,19 @@ export const spotifyCredentials = pgTable("spotify_credentials", {
   expiresAt: timestamp().notNull(),
   createdAt: timestamp().defaultNow(),
   updatedAt: timestamp().defaultNow(),
+});
+
+export const userStats = pgTable("user_stats", {
+  id: text("id").primaryKey(),
+  userId: text()
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  lifetimeStarsEarned: integer().default(0).notNull(),
+  lifetimeStagesWon: integer().default(0).notNull(),
+  battlesCompleted: integer().default(0).notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
 });
 
 // Relations
@@ -161,6 +180,13 @@ export const playerRelations = relations(player, ({ one }) => ({
   }),
   user: one(user, {
     fields: [player.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userStatsRelations = relations(userStats, ({ one }) => ({
+  user: one(user, {
+    fields: [userStats.userId],
     references: [user.id],
   }),
 }));
