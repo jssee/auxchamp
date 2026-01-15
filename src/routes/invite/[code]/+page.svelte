@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
+  import * as Field from "$lib/components/ui/field";
   import { Button } from "$lib/components/ui/button";
   import { joinBattle } from "$lib/remote/invite.remote";
   import type { PageProps } from "./$types";
@@ -81,7 +82,7 @@
       <Card.Footer>
         <form {...joinBattle}>
           {#each joinBattle.fields.allIssues() as issue}
-            <p class="text-sm text-red-500">{issue.message}</p>
+            <Field.Error>{issue.message}</Field.Error>
           {/each}
           <input type="hidden" name="battleId" value={data.battle.id} />
           <Button type="submit">Join Battle</Button>
