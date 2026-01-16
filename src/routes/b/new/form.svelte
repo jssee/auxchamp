@@ -1,11 +1,15 @@
 <script lang="ts">
+  import CircleAlert from "@lucide/svelte/icons/circle-alert";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Switch } from "$lib/components/ui/switch";
+  import * as Alert from "$lib/components/ui/alert";
   import * as Field from "$lib/components/ui/field";
   import * as Select from "$lib/components/ui/select";
   import { DateTimePicker } from "$lib/components/ui/datetime-picker";
   import { createBattle } from "$lib/remote/battle.remote";
+
+  const formErrors = $derived(createBattle.fields.allIssues() ?? []);
 
   type StageInput = {
     vibe: string;
@@ -35,9 +39,23 @@
 </script>
 
 <form {...createBattle} class="flex h-full flex-col">
-  {#each createBattle.fields.allIssues() as issue}
-    <Field.Error>{issue.message}</Field.Error>
-  {/each}
+  {#if formErrors.length > 0}
+    <Alert.Root variant="destructive" class="mb-4">
+      <CircleAlert />
+      <Alert.Title>Error</Alert.Title>
+      <Alert.Description>
+        {#if formErrors.length === 1}
+          {formErrors[0].message}
+        {:else}
+          <ul class="mt-1 list-inside list-disc">
+            {#each formErrors as issue}
+              <li>{issue.message}</li>
+            {/each}
+          </ul>
+        {/if}
+      </Alert.Description>
+    </Alert.Root>
+  {/if}
 
   <Field.Set class="flex min-h-0 flex-1 flex-col">
     <Field.Legend>Create Battle</Field.Legend>
