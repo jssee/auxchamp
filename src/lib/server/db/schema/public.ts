@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   integer,
   pgTable,
@@ -49,7 +50,7 @@ export const player = pgTable("player", {
   id: text("id").primaryKey(),
   battleId: text().notNull(),
   userId: text().notNull(),
-  joinedAt: integer(),
+  joinedAt: bigint({ mode: "number" }),
   totalStarsEarned: integer(),
   stagesWon: integer(),
 });
@@ -82,7 +83,7 @@ export const submission = pgTable("submission", {
   userId: text().notNull(),
   spotifyUrl: text(),
   submissionOrder: integer(),
-  submittedAt: integer(),
+  submittedAt: bigint({ mode: "number" }),
   starsReceived: integer(),
   note: text(),
 });
@@ -94,7 +95,7 @@ export const star = pgTable(
     stageId: text().notNull(),
     voterId: text().notNull(),
     submissionId: text().notNull(),
-    votedAt: integer(),
+    votedAt: bigint({ mode: "number" }),
   },
   (t) => ({
     uniqueVote: unique().on(t.stageId, t.voterId, t.submissionId),
