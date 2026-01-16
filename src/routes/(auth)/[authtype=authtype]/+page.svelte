@@ -5,6 +5,7 @@
   import SignupForm from "$lib/components/auth/signup-form.svelte";
 
   const isSignUp = $derived(page.params.authtype === "signup");
+  const redirectTo = $derived(page.url.searchParams.get("redirectTo"));
 </script>
 
 <main class="col-content grid h-full place-items-center">
@@ -26,14 +27,14 @@
       {#if isSignUp}
         {@render switchAuthType({
           question: "Already have an account? ",
-          href: "/signin",
+          href: redirectTo ? `/signin?redirectTo=${encodeURIComponent(redirectTo)}` : "/signin",
           cta: "Sign in",
           postscript: " instead.",
         })}
       {:else}
         {@render switchAuthType({
           question: "Don't have an account? ",
-          href: "/signup",
+          href: redirectTo ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}` : "/signup",
           cta: "Sign up",
           postscript: " for free.",
         })}

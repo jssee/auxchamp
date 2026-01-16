@@ -175,6 +175,15 @@ export const createBattle = form(battleFormSchema, async (data, invalid) => {
       currentStageId: stageIds[0],
       creatorId: locals.user.id,
       status: "active",
+      inviteCode: nanoid(12),
+    });
+
+    // Add creator as first player
+    await db.insert(player).values({
+      id: nanoid(8),
+      battleId,
+      userId: locals.user.id,
+      joinedAt: Date.now(),
     });
 
     // Insert stages and schedule QStash jobs

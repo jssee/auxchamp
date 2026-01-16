@@ -11,6 +11,7 @@
 
   let visibility = $state(battle.visibility);
   let doubleSubmissions = $state(battle.doubleSubmissions);
+  let copied = $state(false);
 </script>
 
 <!-- Update form -->
@@ -94,6 +95,42 @@
     </Field.Group>
   </Field.Set>
 </form>
+
+{#if battle.inviteCode}
+  {@const inviteUrl = `/invite/${battle.inviteCode}`}
+  <div class="mt-8">
+    <Field.Set>
+      <Field.Legend>Invite Link</Field.Legend>
+      <Field.Description>Share this link to invite players to your battle.</Field.Description>
+      <Field.Separator />
+      <Field.Group>
+        <Field.Field orientation="responsive">
+          <Field.Content>
+            <Field.Label>Link</Field.Label>
+          </Field.Content>
+          <div class="flex gap-2">
+            <Input readonly value={inviteUrl} class="font-mono text-sm" />
+            <Button
+              type="button"
+              variant="outline"
+              onclick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.origin + inviteUrl);
+                  copied = true;
+                  setTimeout(() => (copied = false), 2000);
+                } catch {
+                  // Clipboard API not available
+                }
+              }}
+            >
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        </Field.Field>
+      </Field.Group>
+    </Field.Set>
+  </div>
+{/if}
 
 <!-- Delete form (separate) -->
 <form {...cancelBattle} class="mt-8">

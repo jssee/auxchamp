@@ -7,6 +7,32 @@ import { auth } from "$lib/auth";
 import { db } from "$lib/server/db";
 import { user } from "$lib/server/db/schema";
 
+const sanitizeRedirect = (
+  redirectTo: string | null,
+  baseUrl: URL,
+  fallback: string,
+) => {
+  if (!redirectTo) {
+    return fallback;
+  }
+  if (redirectTo.startsWith("//") || redirectTo.startsWith("\\\\")) {
+    return fallback;
+  }
+
+  try {
+    const target = new URL(redirectTo, baseUrl);
+    if (target.origin !== baseUrl.origin) {
+      return fallback;
+    }
+    if (!target.pathname.startsWith("/")) {
+      return fallback;
+    }
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return fallback;
+  }
+};
+
 export const signUp = form(
   v.object({
     name: v.pipe(
@@ -38,8 +64,9 @@ export const signUp = form(
       invalid(err.body.message);
     }
     const redirectTo = url.searchParams.get("redirectTo");
+    const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
 
-    redirect(302, redirectTo ?? "/home");
+    redirect(302, safeRedirect);
   },
 );
 
@@ -54,8 +81,9 @@ export const signOut = form(async () => {
     return error(500, { message: "Something went wrong" });
   }
   const redirectTo = url.searchParams.get("redirectTo");
+  const safeRedirect = sanitizeRedirect(redirectTo, url, "/");
 
-  redirect(302, redirectTo ?? "/");
+  redirect(302, safeRedirect);
 });
 
 export const signIn = form(
@@ -77,8 +105,9 @@ export const signIn = form(
       invalid(err.body.message);
     }
     const redirectTo = url.searchParams.get("redirectTo");
+    const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
 
-    redirect(302, redirectTo ?? "/home");
+    redirect(302, safeRedirect);
   },
 );
 
