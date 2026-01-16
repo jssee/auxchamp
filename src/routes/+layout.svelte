@@ -20,6 +20,12 @@
 
 <svelte:head>
   <link rel="icon" href={favicon} />
+  <!-- Seline analytics -->
+  <script
+    async
+    src="https://cdn.seline.com/seline.js"
+    data-token="5d1b0e6affbaf65"
+  ></script>
 </svelte:head>
 
 <ModeWatcher />
