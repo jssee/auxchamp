@@ -40,7 +40,7 @@ export const createThing = form(
     } catch (err) {
       return invalid(err.message);
     }
-  }
+  },
 );
 ```
 
@@ -73,7 +73,7 @@ const optionalString = (schema: v.GenericSchema<string>) =>
 // Usage
 v.object({
   name: optionalString(v.pipe(v.string(), v.minLength(3))),
-})
+});
 ```
 
 ## Form Components
@@ -88,7 +88,7 @@ Use Field components from `$lib/components/ui/field`:
   import { createThing } from "./feature.remote";
 
   let { initialData }: { initialData: SomeType } = $props();
-  let id = $props.id();  // Unique ID for form field associations
+  let id = $props.id(); // Unique ID for form field associations
 </script>
 
 <form {...createThing}>
@@ -126,12 +126,12 @@ Use Field components from `$lib/components/ui/field`:
 
 ### Key Form Bindings
 
-| Pattern | Purpose |
-|---------|---------|
-| `<form {...formHandler}>` | Bind form to remote function |
-| `{...formHandler.fields.name.as("text")}` | Bind input to field |
-| `formHandler.fields.name.issues()` | Get validation errors |
-| `let id = $props.id()` | Generate unique IDs for labels |
+| Pattern                                   | Purpose                        |
+| ----------------------------------------- | ------------------------------ |
+| `<form {...formHandler}>`                 | Bind form to remote function   |
+| `{...formHandler.fields.name.as("text")}` | Bind input to field            |
+| `formHandler.fields.name.issues()`        | Get validation errors          |
+| `let id = $props.id()`                    | Generate unique IDs for labels |
 
 ### Field Component Hierarchy
 
@@ -169,7 +169,7 @@ Always use runes syntax:
 
   // Derived values
   let doubled = $derived(count * 2);
-  let filtered = $derived(items.filter(i => i.active));
+  let filtered = $derived(items.filter((i) => i.active));
 </script>
 ```
 
@@ -237,11 +237,11 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 ## Anti-Patterns
 
-| Don't | Do |
-|-------|-----|
-| `+page.server.ts` form actions | `*.remote.ts` with `form()` |
-| Zod validation | Valibot (`import * as v from "valibot"`) |
-| `use:enhance` | Spread form handler `{...formHandler}` |
-| `export let data` | `let { data } = $props()` |
-| Generic `<input>` | Field components + Input from ui lib |
-| Manual form state | `formHandler.fields.x.as()` bindings |
+| Don't                          | Do                                       |
+| ------------------------------ | ---------------------------------------- |
+| `+page.server.ts` form actions | `*.remote.ts` with `form()`              |
+| Zod validation                 | Valibot (`import * as v from "valibot"`) |
+| `use:enhance`                  | Spread form handler `{...formHandler}`   |
+| `export let data`              | `let { data } = $props()`                |
+| Generic `<input>`              | Field components + Input from ui lib     |
+| Manual form state              | `formHandler.fields.x.as()` bindings     |

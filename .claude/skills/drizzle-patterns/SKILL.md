@@ -9,11 +9,11 @@ description: Project-specific Drizzle ORM patterns for schema, queries, and muta
 
 All schemas live in `src/lib/server/db/schema/`:
 
-| File | Purpose |
-|------|---------|
-| `auth.ts` | better-auth tables (don't modify) |
-| `public.ts` | Application domain tables |
-| `index.ts` | Re-exports all schemas |
+| File        | Purpose                           |
+| ----------- | --------------------------------- |
+| `auth.ts`   | better-auth tables (don't modify) |
+| `public.ts` | Application domain tables         |
+| `index.ts`  | Re-exports all schemas            |
 
 **After adding a table, update the re-export in `index.ts`.**
 
@@ -23,17 +23,23 @@ All schemas live in `src/lib/server/db/schema/`:
 // src/lib/server/db/schema/public.ts
 import { pgTable, text, integer, timestamp, json } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-valibot";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-valibot";
 import * as v from "valibot";
-import { user } from "./auth";  // Reference auth tables
+import { user } from "./auth"; // Reference auth tables
 
 // 1. Table definition
 export const comment = pgTable("comment", {
-  id: text("id").primaryKey(),  // nanoid(8) generated in app
+  id: text("id").primaryKey(), // nanoid(8) generated in app
   battleId: text("battle_id").notNull(),
   userId: text("user_id").notNull(),
   content: text("content").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => new Date())
@@ -68,7 +74,7 @@ Always use nanoid for IDs:
 import { nanoid } from "nanoid";
 
 await db.insert(comment).values({
-  id: nanoid(8),  // 8-character ID
+  id: nanoid(8), // 8-character ID
   // ...
 });
 ```
@@ -121,12 +127,10 @@ const battles = await db.query.battle.findMany({
   where: or(
     eq(battle.creatorId, userId),
     exists(
-      db.select().from(player).where(
-        and(
-          eq(player.battleId, battle.id),
-          eq(player.userId, userId),
-        )
-      )
+      db
+        .select()
+        .from(player)
+        .where(and(eq(player.battleId, battle.id), eq(player.userId, userId))),
     ),
   ),
 });
@@ -148,7 +152,8 @@ await db.insert(comment).values({
 ### Update
 
 ```ts
-await db.update(comment)
+await db
+  .update(comment)
   .set({ content: data.content })
   .where(eq(comment.id, id));
 
@@ -169,7 +174,8 @@ For multi-table atomic operations:
 ```ts
 await db.transaction(async (tx) => {
   await tx.delete(comment).where(eq(comment.battleId, battleId));
-  await tx.update(battle)
+  await tx
+    .update(battle)
     .set({ commentCount: 0 })
     .where(eq(battle.id, battleId));
 });
@@ -177,16 +183,16 @@ await db.transaction(async (tx) => {
 
 ## Timestamp Patterns
 
-| Pattern | Usage |
-|---------|-------|
-| `.defaultNow().notNull()` | Creation timestamp |
-| `.$onUpdate(() => new Date()).notNull()` | Auto-update on change |
-| `integer()` | Unix seconds (app converts) |
+| Pattern                                  | Usage                       |
+| ---------------------------------------- | --------------------------- |
+| `.defaultNow().notNull()`                | Creation timestamp          |
+| `.$onUpdate(() => new Date()).notNull()` | Auto-update on change       |
+| `integer()`                              | Unix seconds (app converts) |
 
 ## JSON Columns
 
 ```ts
-jobIds: json("job_ids").$type<JobRef[]>()
+jobIds: json("job_ids").$type<JobRef[]>();
 
 // Usage
 await db.insert(stage).values({
@@ -218,11 +224,11 @@ bun run db:studio    # Visual browser
 
 ## Anti-Patterns
 
-| Don't | Do |
-|-------|-----|
-| SQL foreign key constraints | ORM-only relations |
-| UUID for IDs | `nanoid(8)` |
-| Raw SQL queries | Query builder API |
-| Schema outside `src/lib/server/db/schema/` | Put in `public.ts` |
-| Forget index.ts re-export | Always update exports |
-| Date objects in integer columns | Convert: `Math.floor(Date.now() / 1000)` |
+| Don't                                      | Do                                       |
+| ------------------------------------------ | ---------------------------------------- |
+| SQL foreign key constraints                | ORM-only relations                       |
+| UUID for IDs                               | `nanoid(8)`                              |
+| Raw SQL queries                            | Query builder API                        |
+| Schema outside `src/lib/server/db/schema/` | Put in `public.ts`                       |
+| Forget index.ts re-export                  | Always update exports                    |
+| Date objects in integer columns            | Convert: `Math.floor(Date.now() / 1000)` |

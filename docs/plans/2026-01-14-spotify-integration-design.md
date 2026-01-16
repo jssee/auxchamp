@@ -6,14 +6,14 @@ Integrate Spotify playlist creation into the battle flow. When a stage's submiss
 
 ## Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| When to create playlist | At submission deadline (voting_open) | All submissions in, players need playlist for voting |
-| Manual trigger | Yes, battle creator only | Flexibility before deadline |
-| Whose Spotify account | App-owned service account | Simpler auth, no user Spotify dependency |
-| Token storage | Dedicated `spotify_credentials` table | Auto-refresh, cleaner than hijacking auth tables |
-| Testing approach | Hybrid (unit + webhook simulator) | Fast tests + real handler validation |
-| Token acquisition | Semi-automated with Chrome DevTools MCP | Repeatable, handles consent clicks |
+| Decision                | Choice                                  | Rationale                                            |
+| ----------------------- | --------------------------------------- | ---------------------------------------------------- |
+| When to create playlist | At submission deadline (voting_open)    | All submissions in, players need playlist for voting |
+| Manual trigger          | Yes, battle creator only                | Flexibility before deadline                          |
+| Whose Spotify account   | App-owned service account               | Simpler auth, no user Spotify dependency             |
+| Token storage           | Dedicated `spotify_credentials` table   | Auto-refresh, cleaner than hijacking auth tables     |
+| Testing approach        | Hybrid (unit + webhook simulator)       | Fast tests + real handler validation                 |
+| Token acquisition       | Semi-automated with Chrome DevTools MCP | Repeatable, handles consent clicks                   |
 
 ## Data Model
 
@@ -92,10 +92,12 @@ createStagePlaylist(stageId: string): Promise<{ playlistId: string, playlistUrl:
 ### Trigger Points
 
 **Automatic (QStash):**
+
 - `voting_open` action in stage-transition handler
 - Calls `createStagePlaylist(stageId)` after updating phase
 
 **Manual (remote function):**
+
 - `createPlaylist` command in stage.remote.ts
 - Authorization: battle creator only, submission phase only
 
@@ -153,15 +155,15 @@ Signs payload with `QSTASH_CURRENT_SIGNING_KEY`, POSTs to local endpoint.
 
 ## Error Handling
 
-| Scenario | Behavior |
-|----------|----------|
-| Token refresh fails | Throw error (prevent silent failures) |
-| Playlist creation fails | Log error, leave spotifyPlaylistId null |
+| Scenario                   | Behavior                                       |
+| -------------------------- | ---------------------------------------------- |
+| Token refresh fails        | Throw error (prevent silent failures)          |
+| Playlist creation fails    | Log error, leave spotifyPlaylistId null        |
 | Add tracks partial failure | Add what succeeds, log failures, save playlist |
-| No submissions | Skip creation, log info, return null |
-| Playlist already exists | Return existing URL (idempotent) |
-| Invalid Spotify URL | Skip that track, log warning |
-| No credentials in DB | Throw "Run spotify-auth script first" |
+| No submissions             | Skip creation, log info, return null           |
+| Playlist already exists    | Return existing URL (idempotent)               |
+| Invalid Spotify URL        | Skip that track, log warning                   |
+| No credentials in DB       | Throw "Run spotify-auth script first"          |
 
 ## Environment Variables
 

@@ -45,9 +45,13 @@ function main() {
   console.log(authUrl);
   console.log("\n3. Log in with the service account credentials");
   console.log("4. Click 'Agree' to grant permissions");
-  console.log("5. You'll be redirected to the callback which stores the tokens\n");
+  console.log(
+    "5. You'll be redirected to the callback which stores the tokens\n",
+  );
   console.log("For automated flow with Chrome DevTools MCP, ask Claude to:");
-  console.log('  "Use chrome-devtools MCP to complete Spotify OAuth at this URL"');
+  console.log(
+    '  "Use chrome-devtools MCP to complete Spotify OAuth at this URL"',
+  );
 }
 
 main();

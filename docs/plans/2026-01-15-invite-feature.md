@@ -13,6 +13,7 @@
 ### Task 1: Add creator as player on battle creation
 
 **Files:**
+
 - Modify: `src/lib/remote/battle.remote.ts:168-178`
 
 **Step 1: Update createBattle to generate inviteCode and add creator as player**
@@ -63,6 +64,7 @@ git commit -m "Add creator as player and generate inviteCode on battle creation"
 ### Task 2: Create joinBattle remote function
 
 **Files:**
+
 - Modify: `src/lib/remote/battle.remote.ts` (add at end)
 - Create: `src/lib/remote/invite.remote.ts`
 
@@ -154,6 +156,7 @@ git commit -m "Add joinBattle remote function with validation"
 ### Task 3: Create invite page server load
 
 **Files:**
+
 - Modify: `src/routes/invite/[code]/+page.server.ts`
 
 **Step 1: Implement load function**
@@ -234,6 +237,7 @@ git commit -m "Add invite page server load with state detection"
 ### Task 4: Create invite page UI
 
 **Files:**
+
 - Modify: `src/routes/invite/[code]/+page.svelte`
 
 **Step 1: Implement page component**
@@ -297,7 +301,9 @@ git commit -m "Add invite page server load with state detection"
         <p class="text-muted-foreground">
           You've been invited to join <strong>{data.battle.name}</strong>.
         </p>
-        <p class="mt-2 text-muted-foreground">Sign in or create an account to join.</p>
+        <p class="mt-2 text-muted-foreground">
+          Sign in or create an account to join.
+        </p>
       </Card.Content>
       <Card.Footer class="flex gap-2">
         <Button href="/signin?redirectTo={encodeURIComponent(redirectTo)}">
@@ -347,6 +353,7 @@ git commit -m "Add invite page UI with auth state handling"
 ### Task 5: Preserve redirectTo in auth page links
 
 **Files:**
+
 - Modify: `src/routes/(auth)/[authtype=authtype]/+page.svelte:29,36`
 
 **Step 1: Update switchAuthType snippet to preserve redirectTo**
@@ -383,14 +390,18 @@ Add redirect handling to the auth page. Change the snippet to include redirectTo
       {#if isSignUp}
         {@render switchAuthType({
           question: "Already have an account? ",
-          href: redirectTo ? `/signin?redirectTo=${encodeURIComponent(redirectTo)}` : "/signin",
+          href: redirectTo
+            ? `/signin?redirectTo=${encodeURIComponent(redirectTo)}`
+            : "/signin",
           cta: "Sign in",
           postscript: " instead.",
         })}
       {:else}
         {@render switchAuthType({
           question: "Don't have an account? ",
-          href: redirectTo ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}` : "/signup",
+          href: redirectTo
+            ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}`
+            : "/signup",
           cta: "Sign up",
           postscript: " for free.",
         })}
@@ -440,6 +451,7 @@ git commit -m "Preserve redirectTo param when switching between signin/signup"
 ### Task 6: Add invite link display to battle edit page
 
 **Files:**
+
 - Modify: `src/routes/b/[id]/edit/+page.svelte`
 
 **Step 1: Read current edit page**
@@ -467,7 +479,7 @@ Add a section showing the invite link with copy functionality. Location: after t
           variant="outline"
           onclick={() => {
             navigator.clipboard.writeText(
-              `${window.location.origin}/invite/${data.battle.inviteCode}`
+              `${window.location.origin}/invite/${data.battle.inviteCode}`,
             );
           }}
         >
@@ -513,12 +525,12 @@ git commit -m "Display invite link on battle edit page"
 
 ## Summary
 
-| Task | Description |
-|------|-------------|
-| 1 | Generate inviteCode and add creator as player on battle creation |
-| 2 | Create joinBattle remote function with validation |
-| 3 | Create invite page server load with state detection |
-| 4 | Create invite page UI with auth/join handling |
-| 5 | Preserve redirectTo in auth page signin/signup links |
-| 6 | Display invite link on battle edit page |
-| 7 | End-to-end verification |
+| Task | Description                                                      |
+| ---- | ---------------------------------------------------------------- |
+| 1    | Generate inviteCode and add creator as player on battle creation |
+| 2    | Create joinBattle remote function with validation                |
+| 3    | Create invite page server load with state detection              |
+| 4    | Create invite page UI with auth/join handling                    |
+| 5    | Preserve redirectTo in auth page signin/signup links             |
+| 6    | Display invite link on battle edit page                          |
+| 7    | End-to-end verification                                          |

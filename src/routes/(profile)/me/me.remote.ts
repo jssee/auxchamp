@@ -5,14 +5,14 @@ import { getRequestEvent, form } from "$app/server";
 import { db } from "$lib/server/db";
 import { user } from "$lib/server/db/schema";
 
-export const deleteMe = form(async (invalid) => {
+export const deleteMe = form(async () => {
   const { locals } = getRequestEvent();
 
   try {
     await db.delete(user).where(eq(user.id, locals.user.id));
   } catch (err) {
     console.error(err);
-    invalid(err.message);
+    throw new Error((err as Error)?.message || "Failed to delete account");
   }
 });
 
@@ -50,7 +50,7 @@ export const updateMe = form(
       await db.update(user).set(updates).where(eq(user.id, locals.user.id));
     } catch (err) {
       console.error(err);
-      invalid(err.message);
+      invalid((err as Error)?.message || "Failed to update account");
     }
   },
 );

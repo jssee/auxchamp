@@ -23,23 +23,28 @@ export const GET: RequestHandler = async ({ url }) => {
   const redirectUri = `http://127.0.0.1:5173/api/spotify/callback`;
 
   try {
-    const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`,
+    const tokenResponse = await fetch(
+      "https://accounts.spotify.com/api/token",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Basic ${Buffer.from(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`,
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: redirectUri,
+        }),
       },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
+    );
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
       console.error("Spotify token exchange failed:", errorData);
-      return new Response(`Token exchange failed: ${errorData}`, { status: 400 });
+      return new Response(`Token exchange failed: ${errorData}`, {
+        status: 400,
+      });
     }
 
     const tokens = (await tokenResponse.json()) as {

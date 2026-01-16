@@ -69,9 +69,9 @@
           ? extractTrackId(result.submission.spotifyUrl)
           : null}
         <div
-          class="space-y-3 pb-6 border-b last:border-b-0 last:pb-0 {result.rank ===
+          class="space-y-3 border-b pb-6 last:border-b-0 last:pb-0 {result.rank ===
           1
-            ? 'bg-gradient-to-r from-yellow-500/10 to-transparent -mx-6 px-6 py-4 rounded-lg'
+            ? '-mx-6 rounded-lg bg-gradient-to-r from-yellow-500/10 to-transparent px-6 py-4'
             : ''}"
         >
           <div class="flex items-center gap-3">
@@ -114,7 +114,7 @@
           {/if}
 
           {#if result.voters.length > 0}
-            <div class="pl-4 border-l-2 border-muted space-y-1">
+            <div class="space-y-1 border-l-2 border-muted pl-4">
               {#each result.voters as voter}
                 <p class="text-xs text-muted-foreground">{voter.name}</p>
               {/each}

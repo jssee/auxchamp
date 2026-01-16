@@ -55,13 +55,13 @@ export const signUp = form(
       });
 
       if (existingUsername) {
-        invalid(invalid.name("Username already taken"));
+        invalid("Username already taken");
       }
 
       await auth.api.signUpEmail({ body: { name, email, password } });
     } catch (err) {
       console.error(err);
-      invalid(err.body.message);
+      invalid((err as any)?.body?.message || "Signup failed");
     }
     const redirectTo = url.searchParams.get("redirectTo");
     const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
@@ -102,7 +102,7 @@ export const signIn = form(
       await auth.api.signInEmail({ body: { email, password } });
     } catch (err) {
       console.error(err);
-      invalid(err.body.message);
+      invalid((err as any)?.body?.message || "Sign in failed");
     }
     const redirectTo = url.searchParams.get("redirectTo");
     const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
@@ -130,7 +130,7 @@ export const updatePassword = form(
       });
     } catch (err) {
       console.error(err);
-      invalid(err.body.message);
+      invalid((err as any)?.body?.message || "Password change failed");
     }
 
     redirect(302, "/signout");

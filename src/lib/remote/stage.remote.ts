@@ -141,7 +141,7 @@ export const castVote = form(voteSchema, async (data, invalid) => {
   return { success: true };
 });
 
-export const castVotes = form(castVotesSchema, async (data, invalid) => {
+export const castVotes = command(castVotesSchema, async (data) => {
   const { locals } = getRequestEvent();
   if (!locals.user) error(401, "Not authenticated");
 
@@ -153,23 +153,19 @@ export const castVotes = form(castVotesSchema, async (data, invalid) => {
   if (!currentStage) error(404, "Stage not found");
 
   if (currentStage.battle.status !== "active") {
-    invalid("Battle is not active");
-    return;
+    error(400, "Battle is not active");
   }
 
   if (currentStage.battle.currentStageId !== currentStage.id) {
-    invalid("This stage is not active");
-    return;
+    error(400, "This stage is not active");
   }
 
   const now = new Date();
   if (now < currentStage.submissionDeadline) {
-    invalid("Voting has not started yet");
-    return;
+    error(400, "Voting has not started yet");
   }
   if (now >= currentStage.votingDeadline) {
-    invalid("Voting deadline has passed");
-    return;
+    error(400, "Voting deadline has passed");
   }
 
   // Check minimum submissions (4 required)
@@ -178,8 +174,7 @@ export const castVotes = form(castVotesSchema, async (data, invalid) => {
   });
 
   if (allSubmissions.length < 4) {
-    invalid("Not enough submissions for voting");
-    return;
+    error(400, "Not enough submissions for voting");
   }
 
   // Verify all submissions exist and none are user's own
@@ -188,16 +183,14 @@ export const castVotes = form(castVotesSchema, async (data, invalid) => {
   );
 
   if (targetSubmissions.length !== 3) {
-    invalid("One or more submissions not found");
-    return;
+    error(400, "One or more submissions not found");
   }
 
   const ownSubmission = targetSubmissions.find(
     (s) => s.userId === locals.user!.id,
   );
   if (ownSubmission) {
-    invalid("Cannot vote for your own submission");
-    return;
+    error(400, "Cannot vote for your own submission");
   }
 
   // Check if already voted
@@ -209,8 +202,7 @@ export const castVotes = form(castVotesSchema, async (data, invalid) => {
   });
 
   if (existingVotes) {
-    invalid("You have already voted in this stage");
-    return;
+    error(400, "You have already voted in this stage");
   }
 
   // Insert all 3 votes atomically
