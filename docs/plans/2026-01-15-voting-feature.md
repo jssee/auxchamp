@@ -13,6 +13,7 @@
 ## Task 1: Add userStats table (ticket a-f991)
 
 **Files:**
+
 - Modify: `src/lib/server/db/schema/public.ts`
 
 **Step 1: Add userStats table schema**
@@ -58,6 +59,7 @@ git commit -m "feat: add userStats table for lifetime player statistics"
 ## Task 2: Modify star table constraints (ticket a-f352)
 
 **Files:**
+
 - Modify: `src/lib/server/db/schema/public.ts`
 
 **Step 1: Add unique constraint to star table**
@@ -97,6 +99,7 @@ git commit -m "feat: add unique constraint to star table preventing duplicate vo
 ## Task 3: Implement castVotes handler (ticket a-70e8)
 
 **Files:**
+
 - Modify: `src/lib/schemas/stage.ts`
 - Modify: `src/lib/remote/stage.remote.ts`
 - Modify: `src/lib/remote/stage.remote.test.ts`
@@ -293,7 +296,9 @@ export const castVotes = form(castVotesSchema, async (data, invalid) => {
 
       await tx
         .update(submission)
-        .set({ starsReceived: sql`COALESCE(${submission.starsReceived}, 0) + 1` })
+        .set({
+          starsReceived: sql`COALESCE(${submission.starsReceived}, 0) + 1`,
+        })
         .where(eq(submission.id, submissionId));
     }
   });
@@ -314,6 +319,7 @@ git commit -m "feat: implement castVotes handler for batch 3-star voting"
 ## Task 4: Add voting eligibility to stage loader (ticket a-fe3a)
 
 **Files:**
+
 - Modify: `src/routes/b/[id]/s/[id]/+page.server.ts`
 
 **Step 1: Add voting-related data to loader**
@@ -371,10 +377,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   // Voting eligibility
   const userVotes = await db.query.star.findMany({
-    where: and(
-      eq(star.stageId, params.id),
-      eq(star.voterId, locals.user.id),
-    ),
+    where: and(eq(star.stageId, params.id), eq(star.voterId, locals.user.id)),
   });
 
   const hasVoted = userVotes.length > 0;
@@ -388,7 +391,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   const now = new Date();
   const inVotingPhase =
     currentStage.phase === "voting" ||
-    (now >= currentStage.submissionDeadline && now < currentStage.votingDeadline);
+    (now >= currentStage.submissionDeadline &&
+      now < currentStage.votingDeadline);
 
   const canVote =
     inVotingPhase &&
@@ -398,7 +402,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   // Vote results (only if user voted or stage closed)
   let voteResults: Array<{
-    submission: typeof otherSubmissions[0];
+    submission: (typeof otherSubmissions)[0];
     starsReceived: number;
     rank: number;
     voters: Array<{ id: string; name: string | null }>;
@@ -487,6 +491,7 @@ git commit -m "feat: add voting eligibility and results to stage loader"
 ## Task 5: Build voting UI components (ticket a-f628)
 
 **Files:**
+
 - Modify: `src/routes/b/[id]/s/[id]/+page.svelte`
 
 **Step 1: Add voting UI to stage page**
@@ -502,7 +507,11 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
   import { Input } from "$lib/components/ui/input";
   import { Textarea } from "$lib/components/ui/textarea";
   import * as Field from "$lib/components/ui/field";
-  import { submitTrack, createPlaylist, castVotes } from "$lib/remote/stage.remote";
+  import {
+    submitTrack,
+    createPlaylist,
+    castVotes,
+  } from "$lib/remote/stage.remote";
   import type { PageProps } from "./$types";
 
   let creatingPlaylist = $state(false);
@@ -520,7 +529,8 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
         window.location.reload();
       }
     } catch (err) {
-      playlistError = err instanceof Error ? err.message : "Failed to create playlist";
+      playlistError =
+        err instanceof Error ? err.message : "Failed to create playlist";
     } finally {
       creatingPlaylist = false;
     }
@@ -550,7 +560,8 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
         window.location.reload();
       }
     } catch (err) {
-      votingError = err instanceof Error ? err.message : "Failed to submit votes";
+      votingError =
+        err instanceof Error ? err.message : "Failed to submit votes";
     } finally {
       submittingVotes = false;
     }
@@ -582,8 +593,12 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
   <Card.Root>
     <Card.Header>
       <div class="flex items-center justify-between">
-        <Card.Title>Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title>
-        <Badge variant={phaseVariant[data.stage.phase]}>{data.stage.phase}</Badge>
+        <Card.Title
+          >Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title
+        >
+        <Badge variant={phaseVariant[data.stage.phase]}
+          >{data.stage.phase}</Badge
+        >
       </div>
       {#if data.stage.description}
         <Card.Description>{data.stage.description}</Card.Description>
@@ -633,7 +648,10 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
       <Card.Header>
         <Card.Title>Submit a Track</Card.Title>
         <Card.Description>
-          {data.userSubmissions.length} of {data.maxSubmissions} submission{data.maxSubmissions > 1 ? "s" : ""} used
+          {data.userSubmissions.length} of {data.maxSubmissions} submission{data.maxSubmissions >
+          1
+            ? "s"
+            : ""} used
         </Card.Description>
       </Card.Header>
       <Card.Content>
@@ -677,7 +695,9 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.userSubmissions as sub}
-          {@const trackId = sub.spotifyUrl ? extractTrackId(sub.spotifyUrl) : null}
+          {@const trackId = sub.spotifyUrl
+            ? extractTrackId(sub.spotifyUrl)
+            : null}
           <div class="space-y-2">
             {#if trackId}
               <iframe
@@ -705,16 +725,19 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
       <Card.Header>
         <Card.Title>Cast Your Votes</Card.Title>
         <Card.Description>
-          Select 3 submissions to award your stars ({selectedSubmissions.size}/3 selected)
+          Select 3 submissions to award your stars ({selectedSubmissions.size}/3
+          selected)
         </Card.Description>
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.votableSubmissions as sub}
-          {@const trackId = sub.spotifyUrl ? extractTrackId(sub.spotifyUrl) : null}
+          {@const trackId = sub.spotifyUrl
+            ? extractTrackId(sub.spotifyUrl)
+            : null}
           {@const isSelected = selectedSubmissions.has(sub.id)}
           <button
             type="button"
-            class="w-full text-left space-y-2 p-3 rounded-lg border-2 transition-colors {isSelected
+            class="w-full space-y-2 rounded-lg border-2 p-3 text-left transition-colors {isSelected
               ? 'border-primary bg-primary/5'
               : 'border-transparent hover:border-muted'}"
             onclick={() => toggleSelection(sub.id)}
@@ -722,7 +745,9 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
             <div class="flex items-center justify-between">
               <p class="text-sm font-medium">{sub.user.name}</p>
               <Star
-                class="size-5 {isSelected ? 'fill-primary text-primary' : 'text-muted-foreground'}"
+                class="size-5 {isSelected
+                  ? 'fill-primary text-primary'
+                  : 'text-muted-foreground'}"
               />
             </div>
             {#if trackId}
@@ -772,7 +797,9 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
         <Card.Header>
           <Card.Title>Results</Card.Title>
           {#if data.hasVoted && data.stage.phase !== "closed"}
-            <Card.Description>You voted! Results will be final when voting closes.</Card.Description>
+            <Card.Description
+              >You voted! Results will be final when voting closes.</Card.Description
+            >
           {/if}
         </Card.Header>
         <Card.Content class="space-y-6">
@@ -783,11 +810,21 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
             <div class="space-y-2">
               <div class="flex items-center gap-2">
                 <Badge variant={result.rank === 1 ? "default" : "secondary"}>
-                  {result.rank === 1 ? "1st" : result.rank === 2 ? "2nd" : result.rank === 3 ? "3rd" : `${result.rank}th`}
+                  {result.rank === 1
+                    ? "1st"
+                    : result.rank === 2
+                      ? "2nd"
+                      : result.rank === 3
+                        ? "3rd"
+                        : `${result.rank}th`}
                 </Badge>
-                <span class="text-sm font-medium">{result.submission.user.name}</span>
-                <span class="text-sm text-muted-foreground ml-auto">
-                  {result.starsReceived} star{result.starsReceived !== 1 ? "s" : ""}
+                <span class="text-sm font-medium"
+                  >{result.submission.user.name}</span
+                >
+                <span class="ml-auto text-sm text-muted-foreground">
+                  {result.starsReceived} star{result.starsReceived !== 1
+                    ? "s"
+                    : ""}
                 </span>
               </div>
               {#if trackId}
@@ -800,16 +837,26 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
                   style="border-radius: 12px"
                 ></iframe>
               {:else}
-                <p class="text-sm text-muted-foreground">{result.submission.spotifyUrl}</p>
+                <p class="text-sm text-muted-foreground">
+                  {result.submission.spotifyUrl}
+                </p>
               {/if}
               {#if result.submission.note}
-                <p class="text-sm text-muted-foreground">{result.submission.note}</p>
+                <p class="text-sm text-muted-foreground">
+                  {result.submission.note}
+                </p>
               {/if}
               {#if result.voters.length > 0}
-                <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                <div
+                  class="flex items-center gap-1 text-xs text-muted-foreground"
+                >
                   <span>Voted by:</span>
                   {#each result.voters as voter, i}
-                    <span>{voter.name}{i < result.voters.length - 1 ? "," : ""}</span>
+                    <span
+                      >{voter.name}{i < result.voters.length - 1
+                        ? ","
+                        : ""}</span
+                    >
                   {/each}
                 </div>
               {/if}
@@ -833,7 +880,9 @@ Replace `src/routes/b/[id]/s/[id]/+page.svelte`:
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.otherSubmissions as sub}
-          {@const trackId = sub.spotifyUrl ? extractTrackId(sub.spotifyUrl) : null}
+          {@const trackId = sub.spotifyUrl
+            ? extractTrackId(sub.spotifyUrl)
+            : null}
           <div class="space-y-2">
             <p class="text-sm font-medium">{sub.user.name}</p>
             {#if trackId}
@@ -876,6 +925,7 @@ git commit -m "feat: add voting UI with star selection and results display"
 ## Task 6: Create results page (ticket a-e4ac)
 
 **Files:**
+
 - Create: `src/routes/b/[id]/s/[id]/results/+page.server.ts`
 - Create: `src/routes/b/[id]/s/[id]/results/+page.svelte`
 
@@ -917,10 +967,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   // Check if user can view results
   const userVoted = await db.query.star.findFirst({
-    where: and(
-      eq(star.stageId, params.id),
-      eq(star.voterId, locals.user.id),
-    ),
+    where: and(eq(star.stageId, params.id), eq(star.voterId, locals.user.id)),
   });
 
   const canViewResults = !!userVoted || currentStage.phase === "closed";
@@ -1055,7 +1102,9 @@ Create `src/routes/b/[id]/s/[id]/results/+page.svelte`:
     <Card.Header>
       <Card.Title>Rankings</Card.Title>
       {#if data.stage.phase !== "closed"}
-        <Card.Description>Voting still open — results may change</Card.Description>
+        <Card.Description
+          >Voting still open — results may change</Card.Description
+        >
       {/if}
     </Card.Header>
     <Card.Content class="space-y-6">
@@ -1064,8 +1113,9 @@ Create `src/routes/b/[id]/s/[id]/results/+page.svelte`:
           ? extractTrackId(result.submission.spotifyUrl)
           : null}
         <div
-          class="space-y-3 pb-6 border-b last:border-b-0 last:pb-0 {result.rank === 1
-            ? 'bg-gradient-to-r from-yellow-500/10 to-transparent -mx-6 px-6 py-4 rounded-lg'
+          class="space-y-3 border-b pb-6 last:border-b-0 last:pb-0 {result.rank ===
+          1
+            ? '-mx-6 rounded-lg bg-gradient-to-r from-yellow-500/10 to-transparent px-6 py-4'
             : ''}"
         >
           <div class="flex items-center gap-3">
@@ -1077,7 +1127,11 @@ Create `src/routes/b/[id]/s/[id]/results/+page.svelte`:
             </Badge>
             <span class="font-medium">{result.submission.user.name}</span>
             <span class="ml-auto flex items-center gap-1 text-sm">
-              <Star class="size-4 {result.rank === 1 ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'}" />
+              <Star
+                class="size-4 {result.rank === 1
+                  ? 'fill-yellow-500 text-yellow-500'
+                  : 'text-muted-foreground'}"
+              />
               {result.starsReceived}
             </span>
           </div>
@@ -1092,15 +1146,19 @@ Create `src/routes/b/[id]/s/[id]/results/+page.svelte`:
               style="border-radius: 12px"
             ></iframe>
           {:else}
-            <p class="text-sm text-muted-foreground">{result.submission.spotifyUrl}</p>
+            <p class="text-sm text-muted-foreground">
+              {result.submission.spotifyUrl}
+            </p>
           {/if}
 
           {#if result.submission.note}
-            <p class="text-sm text-muted-foreground italic">"{result.submission.note}"</p>
+            <p class="text-sm text-muted-foreground italic">
+              "{result.submission.note}"
+            </p>
           {/if}
 
           {#if result.voters.length > 0}
-            <div class="pl-4 border-l-2 border-muted space-y-1">
+            <div class="space-y-1 border-l-2 border-muted pl-4">
               {#each result.voters as voter}
                 <p class="text-xs text-muted-foreground">{voter.name}</p>
               {/each}
@@ -1139,6 +1197,7 @@ git commit -m "feat: add results page with rankings and voter breakdown"
 ## Task 7: Add tally logic to stage_closed transition (ticket a-a3d5)
 
 **Files:**
+
 - Modify: `src/routes/api/qstash/stage-transition/+server.ts`
 
 **Step 1: Add tally helper function**
@@ -1146,7 +1205,14 @@ git commit -m "feat: add results page with rankings and voter breakdown"
 Add before the POST handler:
 
 ```typescript
-import { battle, stage, submission, star, player, userStats } from "$lib/server/db/schema";
+import {
+  battle,
+  stage,
+  submission,
+  star,
+  player,
+  userStats,
+} from "$lib/server/db/schema";
 import { sql, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -1290,6 +1356,7 @@ git commit -m "feat: add tally logic to stage_closed transition"
 ## Task 8: Add battle standings to overview page (ticket a-2803)
 
 **Files:**
+
 - Modify: `src/routes/b/[id]/+page.server.ts`
 - Modify: `src/routes/b/[id]/+page.svelte`
 
@@ -1422,24 +1489,30 @@ Update `src/routes/b/[id]/+page.svelte`:
         <div class="space-y-2">
           {#each data.standings as standing}
             <div
-              class="flex items-center gap-3 p-2 rounded-lg {standing.rank === 1
+              class="flex items-center gap-3 rounded-lg p-2 {standing.rank === 1
                 ? 'bg-yellow-500/10'
                 : ''}"
             >
               <Badge
                 variant={standing.rank === 1 ? "default" : "secondary"}
-                class={standing.rank === 1 ? "bg-yellow-500 text-yellow-950" : ""}
+                class={standing.rank === 1
+                  ? "bg-yellow-500 text-yellow-950"
+                  : ""}
               >
                 {getRankLabel(standing.rank)}
               </Badge>
-              <span class="font-medium flex-1">{standing.user.name}</span>
-              <span class="flex items-center gap-1 text-sm text-muted-foreground">
+              <span class="flex-1 font-medium">{standing.user.name}</span>
+              <span
+                class="flex items-center gap-1 text-sm text-muted-foreground"
+              >
                 <Star class="size-4" />
                 {standing.totalStarsEarned}
               </span>
               {#if standing.stagesWon > 0}
                 <span class="text-xs text-muted-foreground">
-                  ({standing.stagesWon} stage{standing.stagesWon !== 1 ? "s" : ""} won)
+                  ({standing.stagesWon} stage{standing.stagesWon !== 1
+                    ? "s"
+                    : ""} won)
                 </span>
               {/if}
             </div>
@@ -1504,6 +1577,7 @@ git commit -m "feat: add battle standings to overview page"
 ## Task 9: Update battle_completed transition for userStats (ticket a-db6b)
 
 **Files:**
+
 - Modify: `src/routes/api/qstash/stage-transition/+server.ts`
 
 **Step 1: Add battlesCompleted increment**

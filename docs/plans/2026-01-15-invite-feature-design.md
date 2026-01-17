@@ -40,13 +40,13 @@ Validate `redirectTo` starts with `/` to prevent open redirects.
 
 ## Files to Change
 
-| File | Change |
-|------|--------|
-| `src/lib/remote/battle.remote.ts` | Add `joinBattle` function |
-| `src/lib/remote/battle.remote.ts` | Modify `createBattle`: generate `inviteCode`, add creator as player |
-| `src/routes/invite/[code]/+page.server.ts` | Load battle by code, check eligibility |
-| `src/routes/invite/[code]/+page.svelte` | Render join UI |
-| `src/routes/(auth)/[authtype=authtype]/` | Verify `redirectTo` passthrough |
+| File                                       | Change                                                              |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `src/lib/remote/battle.remote.ts`          | Add `joinBattle` function                                           |
+| `src/lib/remote/battle.remote.ts`          | Modify `createBattle`: generate `inviteCode`, add creator as player |
+| `src/routes/invite/[code]/+page.server.ts` | Load battle by code, check eligibility                              |
+| `src/routes/invite/[code]/+page.svelte`    | Render join UI                                                      |
+| `src/routes/(auth)/[authtype=authtype]/`   | Verify `redirectTo` passthrough                                     |
 
 ## Not Included (MVP)
 

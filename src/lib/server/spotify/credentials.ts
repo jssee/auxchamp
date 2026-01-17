@@ -14,7 +14,9 @@ export async function getCredentials(): Promise<SpotifyCredentials> {
   });
 
   if (!creds) {
-    throw new Error("Spotify credentials not found. Run spotify-auth script first.");
+    throw new Error(
+      "Spotify credentials not found. Run spotify-auth script first.",
+    );
   }
 
   return {

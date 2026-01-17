@@ -52,8 +52,12 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length < 3) {
-    console.log("Usage: bun scripts/test-qstash-webhook.ts <action> <stageId> <battleId> [stageNumber]");
-    console.log("Actions: voting_open, stage_closed, battle_completed, submission_open");
+    console.log(
+      "Usage: bun scripts/test-qstash-webhook.ts <action> <stageId> <battleId> [stageNumber]",
+    );
+    console.log(
+      "Actions: voting_open, stage_closed, battle_completed, submission_open",
+    );
     process.exit(1);
   }
 

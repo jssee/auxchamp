@@ -43,6 +43,7 @@ userStats
 Replaces single `castVote`. Input: `{ stageId, submissionIds: [id1, id2, id3] }`
 
 Validations:
+
 - Stage exists and is current stage
 - Battle is active, phase is `voting`
 - Current time < votingDeadline

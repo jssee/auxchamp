@@ -53,7 +53,9 @@ describe("extractTrackId", () => {
   });
 
   it("returns null for YouTube URL", () => {
-    const result = extractTrackId("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    const result = extractTrackId(
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    );
     expect(result).toBeNull();
   });
 });

@@ -30,7 +30,9 @@ export async function createStagePlaylist(
 
   // Idempotent: return existing playlist if already created
   if (currentStage.spotifyPlaylistId && currentStage.playlistUrl) {
-    console.log(`Stage ${stageId} already has playlist: ${currentStage.playlistUrl}`);
+    console.log(
+      `Stage ${stageId} already has playlist: ${currentStage.playlistUrl}`,
+    );
     return {
       playlistId: currentStage.spotifyPlaylistId,
       playlistUrl: currentStage.playlistUrl,
@@ -39,7 +41,9 @@ export async function createStagePlaylist(
 
   // Skip if no submissions
   if (currentStage.submissions.length === 0) {
-    console.log(`Stage ${stageId} has no submissions, skipping playlist creation`);
+    console.log(
+      `Stage ${stageId} has no submissions, skipping playlist creation`,
+    );
     return null;
   }
 
@@ -53,7 +57,9 @@ export async function createStagePlaylist(
 
     const trackId = extractTrackId(submission.spotifyUrl);
     if (!trackId) {
-      console.warn(`Invalid Spotify URL for submission ${submission.id}: ${submission.spotifyUrl}`);
+      console.warn(
+        `Invalid Spotify URL for submission ${submission.id}: ${submission.spotifyUrl}`,
+      );
       continue;
     }
 
@@ -61,7 +67,9 @@ export async function createStagePlaylist(
   }
 
   if (trackIds.length === 0) {
-    console.log(`Stage ${stageId} has no valid track URLs, skipping playlist creation`);
+    console.log(
+      `Stage ${stageId} has no valid track URLs, skipping playlist creation`,
+    );
     return null;
   }
 

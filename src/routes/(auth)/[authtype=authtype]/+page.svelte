@@ -27,14 +27,18 @@
       {#if isSignUp}
         {@render switchAuthType({
           question: "Already have an account? ",
-          href: redirectTo ? `/signin?redirectTo=${encodeURIComponent(redirectTo)}` : "/signin",
+          href: redirectTo
+            ? `/signin?redirectTo=${encodeURIComponent(redirectTo)}`
+            : "/signin",
           cta: "Sign in",
           postscript: " instead.",
         })}
       {:else}
         {@render switchAuthType({
           question: "Don't have an account? ",
-          href: redirectTo ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}` : "/signup",
+          href: redirectTo
+            ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}`
+            : "/signup",
           cta: "Sign up",
           postscript: " for free.",
         })}

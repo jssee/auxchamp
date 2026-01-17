@@ -21,7 +21,9 @@ export function extractTrackId(spotifyUrl: string): string | null {
   // https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh?si=...
   // https://open.spotify.com/intl-de/track/4iV5W9uYEdYUVa79Axb7Rh
   // spotify:track:4iV5W9uYEdYUVa79Axb7Rh
-  const urlMatch = spotifyUrl.match(/spotify\.com\/(?:intl-[a-z]+\/)?track\/([a-zA-Z0-9]+)/);
+  const urlMatch = spotifyUrl.match(
+    /spotify\.com\/(?:intl-[a-z]+\/)?track\/([a-zA-Z0-9]+)/,
+  );
   if (urlMatch) return urlMatch[1];
 
   const uriMatch = spotifyUrl.match(/spotify:track:([a-zA-Z0-9]+)/);
@@ -67,14 +69,17 @@ export async function createPlaylist(
 ): Promise<{ id: string; url: string }> {
   const userId = await getCurrentUserId();
 
-  const playlist = await spotifyFetch<SpotifyPlaylist>(`/users/${userId}/playlists`, {
-    method: "POST",
-    body: JSON.stringify({
-      name,
-      description: description || "",
-      public: true,
-    }),
-  });
+  const playlist = await spotifyFetch<SpotifyPlaylist>(
+    `/users/${userId}/playlists`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        description: description || "",
+        public: true,
+      }),
+    },
+  );
 
   return {
     id: playlist.id,

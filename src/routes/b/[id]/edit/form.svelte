@@ -101,7 +101,9 @@
   <div class="mt-8">
     <Field.Set>
       <Field.Legend>Invite Link</Field.Legend>
-      <Field.Description>Share this link to invite players to your battle.</Field.Description>
+      <Field.Description
+        >Share this link to invite players to your battle.</Field.Description
+      >
       <Field.Separator />
       <Field.Group>
         <Field.Field orientation="responsive">
@@ -115,7 +117,9 @@
               variant="outline"
               onclick={async () => {
                 try {
-                  await navigator.clipboard.writeText(window.location.origin + inviteUrl);
+                  await navigator.clipboard.writeText(
+                    window.location.origin + inviteUrl,
+                  );
                   copied = true;
                   setTimeout(() => (copied = false), 2000);
                 } catch {

@@ -50,7 +50,9 @@
         <p class="text-muted-foreground">
           You've been invited to join <strong>{data.battle.name}</strong>.
         </p>
-        <p class="mt-2 text-muted-foreground">Sign in or create an account to join.</p>
+        <p class="mt-2 text-muted-foreground">
+          Sign in or create an account to join.
+        </p>
       </Card.Content>
       <Card.Footer class="flex gap-2">
         <Button href="/signin?redirectTo={encodeURIComponent(redirectTo)}">
