@@ -6,16 +6,10 @@
   import * as Card from "$lib/components/ui/card";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
+  import { getRankLabel } from "$lib/utils/format";
   import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
-
-  function getRankLabel(rank: number): string {
-    if (rank === 1) return "1st";
-    if (rank === 2) return "2nd";
-    if (rank === 3) return "3rd";
-    return `${rank}th`;
-  }
 </script>
 
 <main class="col-content space-y-6">
@@ -43,24 +37,30 @@
         <div class="space-y-2">
           {#each data.standings as standing}
             <div
-              class="flex items-center gap-3 p-2 rounded-lg {standing.rank === 1
+              class="flex items-center gap-3 rounded-lg p-2 {standing.rank === 1
                 ? 'bg-yellow-500/10'
                 : ''}"
             >
               <Badge
                 variant={standing.rank === 1 ? "default" : "secondary"}
-                class={standing.rank === 1 ? "bg-yellow-500 text-yellow-950" : ""}
+                class={standing.rank === 1
+                  ? "bg-yellow-500 text-yellow-950"
+                  : ""}
               >
                 {getRankLabel(standing.rank)}
               </Badge>
-              <span class="font-medium flex-1">{standing.user.name}</span>
-              <span class="flex items-center gap-1 text-sm text-muted-foreground">
+              <span class="flex-1 font-medium">{standing.user.name}</span>
+              <span
+                class="flex items-center gap-1 text-sm text-muted-foreground"
+              >
                 <Star class="size-4" />
                 {standing.totalStarsEarned}
               </span>
               {#if standing.stagesWon > 0}
                 <span class="text-xs text-muted-foreground">
-                  ({standing.stagesWon} stage{standing.stagesWon !== 1 ? "s" : ""} won)
+                  ({standing.stagesWon} stage{standing.stagesWon !== 1
+                    ? "s"
+                    : ""} won)
                 </span>
               {/if}
             </div>

@@ -2,7 +2,9 @@ import { error, redirect } from "@sveltejs/kit";
 import { eq, and } from "drizzle-orm";
 
 import { db } from "$lib/server/db";
-import { stage, submission, player, star } from "$lib/server/db/schema";
+import { stage, submission, star } from "$lib/server/db/schema";
+import { isParticipant } from "$lib/server/access";
+import { assignRanks } from "$lib/utils/format";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -16,18 +18,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   if (!currentStage) error(404, "Stage not found");
 
   const isCreator = currentStage.battle.creatorId === locals.user.id;
-  const isPlayer = isCreator
-    ? true
-    : await db.query.player
-        .findFirst({
-          where: and(
-            eq(player.battleId, currentStage.battleId),
-            eq(player.userId, locals.user.id),
-          ),
-        })
-        .then((p) => !!p);
+  const participant = await isParticipant(
+    locals.user.id,
+    currentStage.battleId,
+    currentStage.battle.creatorId,
+  );
 
-  if (!isPlayer) error(403, "Not a participant in this battle");
+  if (!participant) error(403, "Not a participant in this battle");
 
   const userSubmissions = await db.query.submission.findMany({
     where: and(
@@ -92,7 +89,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       starsBySubmission.set(s.submissionId, existing);
     }
 
-    const ranked = otherSubmissions
+    const withScores = otherSubmissions
       .map((sub) => ({
         submission: sub,
         starsReceived: sub.starsReceived || 0,
@@ -103,15 +100,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       }))
       .sort((a, b) => b.starsReceived - a.starsReceived);
 
-    let currentRank = 1;
-    let previousStars = -1;
-    voteResults = ranked.map((item, index) => {
-      if (item.starsReceived !== previousStars) {
-        currentRank = index + 1;
-        previousStars = item.starsReceived;
-      }
-      return { ...item, rank: currentRank };
-    });
+    voteResults = assignRanks(withScores, (item) => item.starsReceived);
   }
 
   const maxSubmissions = currentStage.battle.doubleSubmissions ? 2 : 1;

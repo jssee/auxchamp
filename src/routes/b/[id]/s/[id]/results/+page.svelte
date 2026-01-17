@@ -5,21 +5,11 @@
   import * as Card from "$lib/components/ui/card";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
+  import SpotifyEmbed from "$lib/components/spotify-embed.svelte";
+  import { getRankLabel } from "$lib/utils/format";
   import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
-
-  function extractTrackId(url: string): string | null {
-    const match = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
-  }
-
-  function getRankLabel(rank: number): string {
-    if (rank === 1) return "1st";
-    if (rank === 2) return "2nd";
-    if (rank === 3) return "3rd";
-    return `${rank}th`;
-  }
 </script>
 
 <main class="col-content space-y-6">
@@ -65,13 +55,10 @@
     </Card.Header>
     <Card.Content class="space-y-6">
       {#each data.results as result}
-        {@const trackId = result.submission.spotifyUrl
-          ? extractTrackId(result.submission.spotifyUrl)
-          : null}
         <div
-          class="space-y-3 pb-6 border-b last:border-b-0 last:pb-0 {result.rank ===
+          class="space-y-3 border-b pb-6 last:border-b-0 last:pb-0 {result.rank ===
           1
-            ? 'bg-gradient-to-r from-yellow-500/10 to-transparent -mx-6 px-6 py-4 rounded-lg'
+            ? '-mx-6 rounded-lg bg-gradient-to-r from-yellow-500/10 to-transparent px-6 py-4'
             : ''}"
         >
           <div class="flex items-center gap-3">
@@ -92,20 +79,7 @@
             </span>
           </div>
 
-          {#if trackId}
-            <iframe
-              title="Spotify embed"
-              src="https://open.spotify.com/embed/track/{trackId}"
-              width="100%"
-              height="80"
-              allow="encrypted-media"
-              style="border-radius: 12px"
-            ></iframe>
-          {:else}
-            <p class="text-sm text-muted-foreground">
-              {result.submission.spotifyUrl}
-            </p>
-          {/if}
+          <SpotifyEmbed url={result.submission.spotifyUrl} />
 
           {#if result.submission.note}
             <p class="text-sm text-muted-foreground italic">
@@ -114,7 +88,7 @@
           {/if}
 
           {#if result.voters.length > 0}
-            <div class="pl-4 border-l-2 border-muted space-y-1">
+            <div class="space-y-1 border-l-2 border-muted pl-4">
               {#each result.voters as voter}
                 <p class="text-xs text-muted-foreground">{voter.name}</p>
               {/each}

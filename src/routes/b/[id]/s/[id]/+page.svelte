@@ -6,6 +6,8 @@
   import { Input } from "$lib/components/ui/input";
   import { Textarea } from "$lib/components/ui/textarea";
   import * as Field from "$lib/components/ui/field";
+  import SpotifyEmbed from "$lib/components/spotify-embed.svelte";
+  import { getRankLabel } from "$lib/utils/format";
   import {
     submitTrack,
     createPlaylist,
@@ -68,11 +70,6 @@
 
   let { data }: PageProps = $props();
 
-  function extractTrackId(url: string): string | null {
-    const match = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
-  }
-
   function formatDeadline(date: Date): string {
     return date.toLocaleString(undefined, {
       dateStyle: "medium",
@@ -86,20 +83,14 @@
     voting: "outline",
     closed: "destructive",
   } as const;
-
-  function getRankLabel(rank: number): string {
-    if (rank === 1) return "1st";
-    if (rank === 2) return "2nd";
-    if (rank === 3) return "3rd";
-    return `${rank}th`;
-  }
 </script>
 
 <main class="col-content space-y-6">
   <Card.Root>
     <Card.Header>
       <div class="flex items-center justify-between">
-        <Card.Title>Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title
+        <Card.Title
+          >Stage {data.stage.stageNumber}: {data.stage.vibe}</Card.Title
         >
         <Badge variant={phaseVariant[data.stage.phase]}
           >{data.stage.phase}</Badge
@@ -200,22 +191,8 @@
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.userSubmissions as sub}
-          {@const trackId = sub.spotifyUrl
-            ? extractTrackId(sub.spotifyUrl)
-            : null}
           <div class="space-y-2">
-            {#if trackId}
-              <iframe
-                title="Spotify embed"
-                src="https://open.spotify.com/embed/track/{trackId}"
-                width="100%"
-                height="80"
-                allow="encrypted-media"
-                style="border-radius: 12px"
-              ></iframe>
-            {:else}
-              <p class="text-sm text-muted-foreground">{sub.spotifyUrl}</p>
-            {/if}
+            <SpotifyEmbed url={sub.spotifyUrl} />
             {#if sub.note}
               <p class="text-sm text-muted-foreground">{sub.note}</p>
             {/if}
@@ -236,13 +213,10 @@
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.votableSubmissions as sub}
-          {@const trackId = sub.spotifyUrl
-            ? extractTrackId(sub.spotifyUrl)
-            : null}
           {@const isSelected = selectedSubmissions.has(sub.id)}
           <button
             type="button"
-            class="w-full text-left space-y-2 p-3 rounded-lg border-2 transition-colors {isSelected
+            class="w-full space-y-2 rounded-lg border-2 p-3 text-left transition-colors {isSelected
               ? 'border-primary bg-primary/5'
               : 'border-transparent hover:border-muted'}"
             onclick={() => toggleSelection(sub.id)}
@@ -255,18 +229,7 @@
                   : 'text-muted-foreground'}"
               />
             </div>
-            {#if trackId}
-              <iframe
-                title="Spotify embed"
-                src="https://open.spotify.com/embed/track/{trackId}"
-                width="100%"
-                height="80"
-                allow="encrypted-media"
-                style="border-radius: 12px; pointer-events: none;"
-              ></iframe>
-            {:else}
-              <p class="text-sm text-muted-foreground">{sub.spotifyUrl}</p>
-            {/if}
+            <SpotifyEmbed url={sub.spotifyUrl} interactive={false} />
             {#if sub.note}
               <p class="text-sm text-muted-foreground">{sub.note}</p>
             {/if}
@@ -309,9 +272,6 @@
         </Card.Header>
         <Card.Content class="space-y-6">
           {#each data.voteResults as result}
-            {@const trackId = result.submission.spotifyUrl
-              ? extractTrackId(result.submission.spotifyUrl)
-              : null}
             <div class="space-y-2">
               <div class="flex items-center gap-2">
                 <Badge variant={result.rank === 1 ? "default" : "secondary"}>
@@ -320,26 +280,13 @@
                 <span class="text-sm font-medium"
                   >{result.submission.user.name}</span
                 >
-                <span class="text-sm text-muted-foreground ml-auto">
+                <span class="ml-auto text-sm text-muted-foreground">
                   {result.starsReceived} star{result.starsReceived !== 1
                     ? "s"
                     : ""}
                 </span>
               </div>
-              {#if trackId}
-                <iframe
-                  title="Spotify embed"
-                  src="https://open.spotify.com/embed/track/{trackId}"
-                  width="100%"
-                  height="80"
-                  allow="encrypted-media"
-                  style="border-radius: 12px"
-                ></iframe>
-              {:else}
-                <p class="text-sm text-muted-foreground">
-                  {result.submission.spotifyUrl}
-                </p>
-              {/if}
+              <SpotifyEmbed url={result.submission.spotifyUrl} />
               {#if result.submission.note}
                 <p class="text-sm text-muted-foreground">
                   {result.submission.note}
@@ -352,7 +299,9 @@
                   <span>Voted by:</span>
                   {#each result.voters as voter, i}
                     <span
-                      >{voter.name}{i < result.voters.length - 1 ? "," : ""}</span
+                      >{voter.name}{i < result.voters.length - 1
+                        ? ","
+                        : ""}</span
                     >
                   {/each}
                 </div>
@@ -377,23 +326,9 @@
       </Card.Header>
       <Card.Content class="space-y-4">
         {#each data.otherSubmissions as sub}
-          {@const trackId = sub.spotifyUrl
-            ? extractTrackId(sub.spotifyUrl)
-            : null}
           <div class="space-y-2">
             <p class="text-sm font-medium">{sub.user.name}</p>
-            {#if trackId}
-              <iframe
-                title="Spotify embed"
-                src="https://open.spotify.com/embed/track/{trackId}"
-                width="100%"
-                height="80"
-                allow="encrypted-media"
-                style="border-radius: 12px"
-              ></iframe>
-            {:else}
-              <p class="text-sm text-muted-foreground">{sub.spotifyUrl}</p>
-            {/if}
+            <SpotifyEmbed url={sub.spotifyUrl} />
             {#if sub.note}
               <p class="text-sm text-muted-foreground">{sub.note}</p>
             {/if}
