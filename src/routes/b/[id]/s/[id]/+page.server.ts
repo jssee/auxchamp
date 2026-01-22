@@ -37,10 +37,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     currentStage.phase === "voting" || currentStage.phase === "closed";
 
   const otherSubmissions = showOtherSubmissions
-    ? await db.query.submission.findMany({
-        where: eq(submission.stageId, params.id),
-        with: { user: true },
-      })
+    ? (
+        await db.query.submission.findMany({
+          where: eq(submission.stageId, params.id),
+          with: { user: true },
+        })
+      ).filter((s) => s.user !== null)
     : [];
 
   // Voting eligibility

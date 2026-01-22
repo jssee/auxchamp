@@ -57,7 +57,9 @@
         stageId: data.stage.id,
         submissionIds: Array.from(selectedSubmissions),
       });
-      if (result.success) {
+      if ("error" in result) {
+        votingError = result.error;
+      } else {
         window.location.reload();
       }
     } catch (err) {
