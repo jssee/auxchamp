@@ -1,8 +1,8 @@
 import { error, redirect } from "@sveltejs/kit";
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "$lib/server/db";
-import { stage, submission, star } from "$lib/server/db/schema";
+import { stage, star, submission } from "$lib/server/db/schema";
 import { isParticipant } from "$lib/server/access";
 import { assignRanks } from "$lib/utils/format";
 import type { PageServerLoad } from "./$types";
@@ -25,35 +25,26 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   if (!participant) error(403, "Not a participant in this battle");
 
-  // Check if user can view results
   const userVoted = await db.query.star.findFirst({
     where: and(eq(star.stageId, params.id), eq(star.voterId, locals.user.id)),
   });
 
-  const canViewResults = !!userVoted || currentStage.phase === "closed";
-
-  if (!canViewResults) {
+  if (!userVoted && currentStage.phase !== "closed") {
     redirect(302, `/b/${currentStage.battleId}/s/${params.id}`);
   }
 
-  // Get all submissions with user info
-  const submissions = await db.query.submission.findMany({
-    where: eq(submission.stageId, params.id),
-    with: { user: true },
-  });
+  const [submissions, allStars] = await Promise.all([
+    db.query.submission.findMany({
+      where: eq(submission.stageId, params.id),
+      with: { user: true },
+    }),
+    db.query.star.findMany({
+      where: eq(star.stageId, params.id),
+      with: { voter: true },
+    }),
+  ]);
 
-  // Get all stars with voter info
-  const allStars = await db.query.star.findMany({
-    where: eq(star.stageId, params.id),
-    with: { voter: true },
-  });
-
-  const starsBySubmission = new Map<string, typeof allStars>();
-  for (const s of allStars) {
-    const existing = starsBySubmission.get(s.submissionId) || [];
-    existing.push(s);
-    starsBySubmission.set(s.submissionId, existing);
-  }
+  const starsBySubmission = Map.groupBy(allStars, (s) => s.submissionId);
 
   const withScores = submissions
     .map((sub) => ({
@@ -68,16 +59,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   const results = assignRanks(withScores, (item) => item.starsReceived);
 
-  // Navigation
-  const sortedStages = currentStage.battle.stages.sort(
+  const sortedStages = currentStage.battle.stages.toSorted(
     (a, b) => a.stageNumber - b.stageNumber,
   );
   const currentIndex = sortedStages.findIndex((s) => s.id === params.id);
-  const prevStage = currentIndex > 0 ? sortedStages[currentIndex - 1] : null;
-  const nextStage =
-    currentIndex < sortedStages.length - 1
-      ? sortedStages[currentIndex + 1]
-      : null;
+  const prevStage = sortedStages[currentIndex - 1] ?? null;
+  const nextStage = sortedStages[currentIndex + 1] ?? null;
 
   return {
     stage: currentStage,
