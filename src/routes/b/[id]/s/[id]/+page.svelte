@@ -9,19 +9,45 @@
   import SpotifyEmbed from "$lib/components/spotify-embed.svelte";
   import { getRankLabel } from "$lib/utils/format";
   import {
-    submitTrack,
-    createPlaylist,
     castVotes,
+    createPlaylist,
+    submitTrack,
   } from "$lib/remote/stage.remote";
   import type { PageProps } from "./$types";
+
+  let { data }: PageProps = $props();
 
   let creatingPlaylist = $state(false);
   let playlistError = $state<string | null>(null);
   let selectedSubmissions = $state<Set<string>>(new Set());
-  let votingError = $state<string | null>(null);
+  let votingError = $state<string | undefined>(undefined);
   let submittingVotes = $state(false);
 
-  async function handleCreatePlaylist(stageId: string) {
+  const phaseVariant = {
+    upcoming: "secondary",
+    submission: "default",
+    voting: "outline",
+    closed: "destructive",
+  } as const;
+
+  function formatDeadline(date: Date): string {
+    return date.toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  }
+
+  function toggleSelection(submissionId: string): void {
+    const newSet = new Set(selectedSubmissions);
+    if (newSet.has(submissionId)) {
+      newSet.delete(submissionId);
+    } else if (newSet.size < 3) {
+      newSet.add(submissionId);
+    }
+    selectedSubmissions = newSet;
+  }
+
+  async function handleCreatePlaylist(stageId: string): Promise<void> {
     creatingPlaylist = true;
     playlistError = null;
     try {
@@ -37,21 +63,11 @@
     }
   }
 
-  function toggleSelection(submissionId: string) {
-    const newSet = new Set(selectedSubmissions);
-    if (newSet.has(submissionId)) {
-      newSet.delete(submissionId);
-    } else if (newSet.size < 3) {
-      newSet.add(submissionId);
-    }
-    selectedSubmissions = newSet;
-  }
-
-  async function handleSubmitVotes() {
+  async function handleSubmitVotes(): Promise<void> {
     if (selectedSubmissions.size !== 3) return;
 
     submittingVotes = true;
-    votingError = null;
+    votingError = undefined;
     try {
       const result = await castVotes({
         stageId: data.stage.id,
@@ -69,22 +85,6 @@
       submittingVotes = false;
     }
   }
-
-  let { data }: PageProps = $props();
-
-  function formatDeadline(date: Date): string {
-    return date.toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  }
-
-  const phaseVariant = {
-    upcoming: "secondary",
-    submission: "default",
-    voting: "outline",
-    closed: "destructive",
-  } as const;
 </script>
 
 <main class="col-content space-y-6">
