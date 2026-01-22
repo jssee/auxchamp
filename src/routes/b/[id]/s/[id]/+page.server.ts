@@ -4,6 +4,10 @@ import { eq, and } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { stage, submission, star } from "$lib/server/db/schema";
 import { isParticipant } from "$lib/server/access";
+import {
+  computeStageRules,
+  shouldShowOtherSubmissions,
+} from "$lib/server/rules/stage";
 import { assignRanks } from "$lib/utils/format";
 import type { PageServerLoad } from "./$types";
 
@@ -73,8 +77,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     ),
   });
 
-  const showOtherSubmissions =
-    currentStage.phase === "voting" || currentStage.phase === "closed";
+  const showOtherSubmissions = shouldShowOtherSubmissions(currentStage.phase);
 
   const otherSubmissions = showOtherSubmissions
     ? (
@@ -89,57 +92,38 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     where: and(eq(star.stageId, params.id), eq(star.voterId, locals.user.id)),
   });
 
-  const hasVoted = userVotes.length > 0;
-  const votedSubmissionIds = userVotes.map((v) => v.submissionId);
-  const votableSubmissions = otherSubmissions.filter(
-    (s) => s.userId !== locals.user!.id,
-  );
-
   const now = new Date();
-  const inVotingPhase =
-    currentStage.phase === "voting" ||
-    (now >= currentStage.submissionDeadline &&
-      now < currentStage.votingDeadline);
 
-  const canVote =
-    inVotingPhase &&
-    !hasVoted &&
-    otherSubmissions.length >= 4 &&
-    votableSubmissions.length >= 3;
+  const rules = computeStageRules({
+    stage: currentStage,
+    user: locals.user,
+    now,
+    userSubmissions,
+    otherSubmissions,
+    userVotes,
+  });
 
   const voteResults = await getVoteResults(
-    hasVoted || currentStage.phase === "closed",
+    rules.hasVoted || currentStage.phase === "closed",
     params.id,
     otherSubmissions,
   );
-
-  const maxSubmissions = currentStage.battle.doubleSubmissions ? 2 : 1;
-  const canSubmit =
-    currentStage.phase === "submission" &&
-    now < currentStage.submissionDeadline &&
-    userSubmissions.length < maxSubmissions;
-
-  const isCreator = currentStage.battle.creatorId === locals.user.id;
-  const canCreatePlaylist =
-    isCreator &&
-    currentStage.phase === "submission" &&
-    !currentStage.spotifyPlaylistId;
 
   return {
     stage: currentStage,
     battle: currentStage.battle,
     userSubmissions,
     otherSubmissions,
-    canSubmit,
-    maxSubmissions,
+    canSubmit: rules.canSubmit,
+    maxSubmissions: rules.maxSubmissions,
     user: locals.user,
-    isCreator,
-    canCreatePlaylist,
+    isCreator: rules.isCreator,
+    canCreatePlaylist: rules.canCreatePlaylist,
     // Voting data
-    hasVoted,
-    votedSubmissionIds,
-    canVote,
+    hasVoted: rules.hasVoted,
+    votedSubmissionIds: rules.votedSubmissionIds,
+    canVote: rules.canVote,
     voteResults,
-    votableSubmissions,
+    votableSubmissions: rules.votableSubmissions,
   };
 };
