@@ -14,21 +14,6 @@ import {
   createPlaylistSchema,
 } from "$lib/schemas/stage";
 
-type StageWithBattle = NonNullable<
-  Awaited<ReturnType<typeof db.query.stage.findFirst<{ with: { battle: true } }>>>
->;
-
-/** Validates battle is active and stage is current. Returns error message or null. */
-function validateStageActive(currentStage: StageWithBattle): string | null {
-  if (currentStage.battle.status !== "active") {
-    return "Battle is not active";
-  }
-  if (currentStage.battle.currentStageId !== currentStage.id) {
-    return "This stage is not active";
-  }
-  return null;
-}
-
 export const submitTrack = form(submitSchema, async (data, invalid) => {
   const { locals } = getRequestEvent();
   if (!locals.user) error(401, "Not authenticated");
@@ -40,12 +25,6 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  const stageError = validateStageActive(currentStage);
-  if (stageError) {
-    invalid(stageError);
-    return;
-  }
-
   const userSubmissions = await db.query.submission.findMany({
     where: and(
       eq(submission.stageId, data.stageId),
@@ -56,13 +35,20 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
   const rules = computeStageRules({
     stage: currentStage,
     user: locals.user,
-    now: new Date(),
     userSubmissions,
-    otherSubmissions: [],
-    userVotes: [],
   });
 
-  if (!rules.canSubmit) {
+  if (!rules.isStageActive) {
+    invalid("This stage is not accepting submissions");
+    return;
+  }
+
+  if (!rules.inSubmissionPhase) {
+    invalid("Submission deadline has passed");
+    return;
+  }
+
+  if (userSubmissions.length >= rules.maxSubmissions) {
     invalid(`Maximum ${rules.maxSubmissions} submission(s) allowed`);
     return;
   }
@@ -91,13 +77,6 @@ export const castVote = form(voteSchema, async (data, invalid) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  const stageError = validateStageActive(currentStage);
-  if (stageError) {
-    invalid(stageError);
-    return;
-  }
-
-  // Fetch submission to verify it exists and check ownership
   const targetSubmission = await db.query.submission.findFirst({
     where: eq(submission.id, data.submissionId),
   });
@@ -116,11 +95,14 @@ export const castVote = form(voteSchema, async (data, invalid) => {
   const rules = computeStageRules({
     stage: currentStage,
     user: locals.user,
-    now: new Date(),
-    userSubmissions: [],
     otherSubmissions: [targetSubmission],
     userVotes,
   });
+
+  if (!rules.isStageActive) {
+    invalid("This stage is not accepting votes");
+    return;
+  }
 
   if (!rules.inVotingPhase) {
     invalid("Voting is not open");
@@ -154,11 +136,6 @@ export const castVotes = command(castVotesSchema, async (data) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  const stageError = validateStageActive(currentStage);
-  if (stageError) {
-    return { error: stageError };
-  }
-
   const allSubmissions = await db.query.submission.findMany({
     where: eq(submission.stageId, data.stageId),
   });
@@ -170,11 +147,13 @@ export const castVotes = command(castVotesSchema, async (data) => {
   const rules = computeStageRules({
     stage: currentStage,
     user: locals.user,
-    now: new Date(),
-    userSubmissions: [],
     otherSubmissions: allSubmissions,
     userVotes,
   });
+
+  if (!rules.isStageActive) {
+    return { error: "This stage is not accepting votes" };
+  }
 
   if (!rules.inVotingPhase) {
     return { error: "Voting is not open" };
@@ -239,18 +218,14 @@ export const createPlaylist = command(createPlaylistSchema, async (data) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  if (currentStage.battle.status !== "active") {
-    error(400, "Battle is not active");
-  }
-
   const rules = computeStageRules({
     stage: currentStage,
     user: locals.user,
-    now: new Date(),
-    userSubmissions: [],
-    otherSubmissions: [],
-    userVotes: [],
   });
+
+  if (!rules.isStageActive) {
+    error(400, "Battle is not active");
+  }
 
   if (!rules.isCreator) {
     error(403, "Only battle creator can create playlist");

@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import { computeStageRules, shouldShowOtherSubmissions } from "./stage";
 
 const baseStage = {
+  id: "stage-1",
   phase: "submission",
   submissionDeadline: new Date("2030-01-01T00:00:00Z"),
   votingDeadline: new Date("2030-01-02T00:00:00Z"),
   spotifyPlaylistId: null,
   battle: {
+    status: "active",
+    currentStageId: "stage-1",
     creatorId: "user-1",
     doubleSubmissions: false,
   },

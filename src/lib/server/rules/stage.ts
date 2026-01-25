@@ -1,11 +1,14 @@
 type StagePhase = "upcoming" | "submission" | "voting" | "closed";
 
-type StageWithBattle = {
+export type StageWithBattle = {
+  id: string;
   phase: StagePhase;
   submissionDeadline: Date;
   votingDeadline: Date;
   spotifyPlaylistId: string | null;
   battle: {
+    status: string;
+    currentStageId: string | null;
     creatorId: string;
     doubleSubmissions: boolean;
   };
@@ -24,13 +27,23 @@ export function shouldShowOtherSubmissions(phase: StagePhase): boolean {
 export function computeStageRules(input: {
   stage: StageWithBattle;
   user: UserRef;
-  now: Date;
-  userSubmissions: Array<{ id: string }>;
-  otherSubmissions: SubmissionRef[];
-  userVotes: VoteRef[];
+  now?: Date;
+  userSubmissions?: Array<{ id: string }>;
+  otherSubmissions?: SubmissionRef[];
+  userVotes?: VoteRef[];
 }) {
-  const { stage, user, now, userSubmissions, otherSubmissions, userVotes } =
-    input;
+  const {
+    stage,
+    user,
+    now = new Date(),
+    userSubmissions = [],
+    otherSubmissions = [],
+    userVotes = [],
+  } = input;
+
+  const isStageActive =
+    stage.battle.status === "active" &&
+    stage.battle.currentStageId === stage.id;
 
   const showOtherSubmissions = shouldShowOtherSubmissions(stage.phase);
   const hasVoted = userVotes.length > 0;
@@ -38,6 +51,9 @@ export function computeStageRules(input: {
   const votableSubmissions = otherSubmissions.filter(
     (submission) => submission.userId !== user.id,
   );
+
+  const inSubmissionPhase =
+    stage.phase === "submission" && now < stage.submissionDeadline;
 
   const inVotingPhase =
     stage.phase === "voting" ||
@@ -50,20 +66,19 @@ export function computeStageRules(input: {
     votableSubmissions.length >= 3;
 
   const maxSubmissions = stage.battle.doubleSubmissions ? 2 : 1;
-  const canSubmit =
-    stage.phase === "submission" &&
-    now < stage.submissionDeadline &&
-    userSubmissions.length < maxSubmissions;
+  const canSubmit = inSubmissionPhase && userSubmissions.length < maxSubmissions;
 
   const isCreator = stage.battle.creatorId === user.id;
   const canCreatePlaylist =
     isCreator && stage.phase === "submission" && !stage.spotifyPlaylistId;
 
   return {
+    isStageActive,
     showOtherSubmissions,
     hasVoted,
     votedSubmissionIds,
     votableSubmissions,
+    inSubmissionPhase,
     inVotingPhase,
     canVote,
     maxSubmissions,
