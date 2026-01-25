@@ -1,6 +1,14 @@
 {
-  "enabledPlugins": {
-    "superpowers@superpowers-dev": true
+  "permissions": {
+    "allow": [
+      "Bash(bun run:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(tk:*)",
+      "Bash(tree:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(agent-browser:*)"
+    ]
   },
   "hooks": {
     "PreToolUse": [

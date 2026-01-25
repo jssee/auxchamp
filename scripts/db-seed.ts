@@ -79,7 +79,8 @@ let vibeIndex = 0;
 
 for (const config of battleConfigs) {
   const battleId = nanoid(8);
-  const stageCount = "stages" in config ? config.stages.length : config.stageCount;
+  const stageCount =
+    "stages" in config ? config.stages.length : config.stageCount;
 
   // Pre-generate stage IDs
   const stageIds: string[] = [];
@@ -132,13 +133,13 @@ for (const config of battleConfigs) {
       // Explicit phase config
       const stageConfig = config.stages[i];
       phase = stageConfig.phase;
-      submissionDeadline = new Date(now.getTime() + stageConfig.daysOffset * day);
+      submissionDeadline = new Date(
+        now.getTime() + stageConfig.daysOffset * day,
+      );
       votingDeadline = new Date(submissionDeadline.getTime() + 2 * day);
     } else if (config.status === "completed") {
       phase = "closed";
-      submissionDeadline = new Date(
-        now.getTime() - (stageCount - i) * 7 * day,
-      );
+      submissionDeadline = new Date(now.getTime() - (stageCount - i) * 7 * day);
       votingDeadline = new Date(submissionDeadline.getTime() + 2 * day);
     } else if (config.status === "draft") {
       phase = "upcoming";
@@ -221,4 +222,6 @@ const totalStages = battleConfigs.reduce(
   (a, b) => a + ("stages" in b ? b.stages.length : b.stageCount),
   0,
 );
-console.log(`Created ${battleConfigs.length} battles with ${totalStages} stages`);
+console.log(
+  `Created ${battleConfigs.length} battles with ${totalStages} stages`,
+);

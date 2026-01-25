@@ -1,21 +1,3 @@
-## Managing tasks
-
-**Important**: This project uses a CLI ticket system for task management. Run `tk help` when you need to use it.
-
-**Workflow rules**:
-
-- Track ALL work in ticket (tk), not TodoWrite
-- Track all non‑trivial changes in git; Commit early and often.
-- Commit changes even if your high-level tasks are not yet done.
-
-## Modern SvelteKit Features
-
-Always use modern sveltekit and svelte features:
-
-- **Remote functions**: Enabled via `experimental.remoteFunctions` - allows server-side form handlers to be called from client
-- **Async compiler**: Experimental async Svelte compiler enabled
-- **Runes**: state management
-
 ## Essential Commands
 
 All commands use `bun` (never npm/pnpm/yarn).
@@ -36,10 +18,12 @@ All commands use `bun` (never npm/pnpm/yarn).
 | `bun run db:reset`    | Reset database (destructive) |
 | `bun run db:seed`     | Seed database                |
 
-## Key Dependencies
+## Browser Automation
 
-- **Database**: drizzle-orm, drizzle-kit, @neondatabase/serverless
-- **Auth**: better-auth with drizzle adapter
-- **Validation**: valibot (similar to Zod but lighter)
-- **UI**: bits-ui, vaul-svelte (drawer), shadcn-svelte components
-- **Styling**: Tailwind CSS 4 (via Vite plugin), tw-animate-css
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
