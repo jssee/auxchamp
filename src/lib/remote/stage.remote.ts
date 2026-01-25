@@ -1,17 +1,33 @@
 import { error } from "@sveltejs/kit";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { command, form, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
-import { battle, stage, submission, star } from "$lib/server/db/schema";
+import { stage, submission, star } from "$lib/server/db/schema";
 import { createStagePlaylist } from "$lib/server/spotify";
+import { computeStageRules } from "$lib/server/rules/stage";
 import {
   submitSchema,
   voteSchema,
   castVotesSchema,
   createPlaylistSchema,
 } from "$lib/schemas/stage";
+
+type StageWithBattle = NonNullable<
+  Awaited<ReturnType<typeof db.query.stage.findFirst<{ with: { battle: true } }>>>
+>;
+
+/** Validates battle is active and stage is current. Returns error message or null. */
+function validateStageActive(currentStage: StageWithBattle): string | null {
+  if (currentStage.battle.status !== "active") {
+    return "Battle is not active";
+  }
+  if (currentStage.battle.currentStageId !== currentStage.id) {
+    return "This stage is not active";
+  }
+  return null;
+}
 
 export const submitTrack = form(submitSchema, async (data, invalid) => {
   const { locals } = getRequestEvent();
@@ -24,36 +40,30 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  // Battle must be active
-  if (currentStage.battle.status !== "active") {
-    invalid("Battle is not active");
+  const stageError = validateStageActive(currentStage);
+  if (stageError) {
+    invalid(stageError);
     return;
   }
 
-  // Stage must be current stage
-  if (currentStage.battle.currentStageId !== currentStage.id) {
-    invalid("This stage is not active");
-    return;
-  }
-
-  // Must be in submission phase (now < submissionDeadline)
-  const now = new Date();
-  if (now >= currentStage.submissionDeadline) {
-    invalid("Submission deadline has passed");
-    return;
-  }
-
-  // Check doubleSubmissions limit
-  const existingSubmissions = await db.query.submission.findMany({
+  const userSubmissions = await db.query.submission.findMany({
     where: and(
       eq(submission.stageId, data.stageId),
       eq(submission.userId, locals.user.id),
     ),
   });
 
-  const maxSubmissions = currentStage.battle.doubleSubmissions ? 2 : 1;
-  if (existingSubmissions.length >= maxSubmissions) {
-    invalid(`Maximum ${maxSubmissions} submission(s) allowed`);
+  const rules = computeStageRules({
+    stage: currentStage,
+    user: locals.user,
+    now: new Date(),
+    userSubmissions,
+    otherSubmissions: [],
+    userVotes: [],
+  });
+
+  if (!rules.canSubmit) {
+    invalid(`Maximum ${rules.maxSubmissions} submission(s) allowed`);
     return;
   }
 
@@ -62,7 +72,7 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
     stageId: data.stageId,
     userId: locals.user.id,
     spotifyUrl: data.spotifyUrl,
-    submissionOrder: existingSubmissions.length + 1,
+    submissionOrder: userSubmissions.length + 1,
     submittedAt: Math.floor(Date.now() / 1000),
     note: data.note || null,
   });
@@ -81,51 +91,43 @@ export const castVote = form(voteSchema, async (data, invalid) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  // Battle must be active
-  if (currentStage.battle.status !== "active") {
-    invalid("Battle is not active");
+  const stageError = validateStageActive(currentStage);
+  if (stageError) {
+    invalid(stageError);
     return;
   }
 
-  // Stage must be current stage
-  if (currentStage.battle.currentStageId !== currentStage.id) {
-    invalid("This stage is not active");
-    return;
-  }
-
-  // Must be in voting phase: submissionDeadline <= now < votingDeadline
-  const now = new Date();
-  if (now < currentStage.submissionDeadline) {
-    invalid("Voting has not started yet");
-    return;
-  }
-  if (now >= currentStage.votingDeadline) {
-    invalid("Voting deadline has passed");
-    return;
-  }
-
-  // Fetch the submission to verify it exists and check ownership
+  // Fetch submission to verify it exists and check ownership
   const targetSubmission = await db.query.submission.findFirst({
     where: eq(submission.id, data.submissionId),
   });
 
   if (!targetSubmission) error(404, "Submission not found");
 
-  // Can't vote for own submission
   if (targetSubmission.userId === locals.user.id) {
     invalid("Cannot vote for your own submission");
     return;
   }
 
-  // Can only vote once per stage
-  const existingVote = await db.query.star.findFirst({
-    where: and(
-      eq(star.stageId, data.stageId),
-      eq(star.voterId, locals.user.id),
-    ),
+  const userVotes = await db.query.star.findMany({
+    where: and(eq(star.stageId, data.stageId), eq(star.voterId, locals.user.id)),
   });
 
-  if (existingVote) {
+  const rules = computeStageRules({
+    stage: currentStage,
+    user: locals.user,
+    now: new Date(),
+    userSubmissions: [],
+    otherSubmissions: [targetSubmission],
+    userVotes,
+  });
+
+  if (!rules.inVotingPhase) {
+    invalid("Voting is not open");
+    return;
+  }
+
+  if (rules.hasVoted) {
     invalid("You have already voted in this stage");
     return;
   }
@@ -152,32 +154,41 @@ export const castVotes = command(castVotesSchema, async (data) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  if (currentStage.battle.status !== "active") {
-    return { error: "Battle is not active" };
+  const stageError = validateStageActive(currentStage);
+  if (stageError) {
+    return { error: stageError };
   }
 
-  if (currentStage.battle.currentStageId !== currentStage.id) {
-    return { error: "This stage is not active" };
-  }
-
-  const now = new Date();
-  if (now < currentStage.submissionDeadline) {
-    return { error: "Voting has not started yet" };
-  }
-  if (now >= currentStage.votingDeadline) {
-    return { error: "Voting deadline has passed" };
-  }
-
-  // Check minimum submissions (4 required)
   const allSubmissions = await db.query.submission.findMany({
     where: eq(submission.stageId, data.stageId),
   });
 
-  if (allSubmissions.length < 4) {
+  const userVotes = await db.query.star.findMany({
+    where: and(eq(star.stageId, data.stageId), eq(star.voterId, locals.user.id)),
+  });
+
+  const rules = computeStageRules({
+    stage: currentStage,
+    user: locals.user,
+    now: new Date(),
+    userSubmissions: [],
+    otherSubmissions: allSubmissions,
+    userVotes,
+  });
+
+  if (!rules.inVotingPhase) {
+    return { error: "Voting is not open" };
+  }
+
+  if (rules.hasVoted) {
+    return { error: "You have already voted in this stage" };
+  }
+
+  if (!rules.canVote) {
     return { error: "Not enough submissions for voting" };
   }
 
-  // Verify all submissions exist and none are user's own
+  // Verify all target submissions exist and none are user's own
   const targetSubmissions = allSubmissions.filter((s) =>
     data.submissionIds.includes(s.id),
   );
@@ -191,18 +202,6 @@ export const castVotes = command(castVotesSchema, async (data) => {
   );
   if (ownSubmission) {
     return { error: "Cannot vote for your own submission" };
-  }
-
-  // Check if already voted
-  const existingVotes = await db.query.star.findFirst({
-    where: and(
-      eq(star.stageId, data.stageId),
-      eq(star.voterId, locals.user.id),
-    ),
-  });
-
-  if (existingVotes) {
-    return { error: "You have already voted in this stage" };
   }
 
   // Insert all 3 votes atomically
@@ -240,18 +239,24 @@ export const createPlaylist = command(createPlaylistSchema, async (data) => {
 
   if (!currentStage) error(404, "Stage not found");
 
-  // Only battle creator can manually create playlist
-  if (currentStage.battle.creatorId !== locals.user.id) {
-    error(403, "Only battle creator can create playlist");
-  }
-
-  // Battle must be active
   if (currentStage.battle.status !== "active") {
     error(400, "Battle is not active");
   }
 
-  // Only allow during submission phase (before automatic creation)
-  if (currentStage.phase !== "submission") {
+  const rules = computeStageRules({
+    stage: currentStage,
+    user: locals.user,
+    now: new Date(),
+    userSubmissions: [],
+    otherSubmissions: [],
+    userVotes: [],
+  });
+
+  if (!rules.isCreator) {
+    error(403, "Only battle creator can create playlist");
+  }
+
+  if (!rules.canCreatePlaylist) {
     error(400, "Playlist can only be created during submission phase");
   }
 
