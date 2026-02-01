@@ -6,7 +6,10 @@ import { command, form, getRequestEvent } from "$app/server";
 import { db } from "$lib/server/db";
 import { stage, submission, star } from "$lib/server/db/schema";
 import { createStagePlaylist } from "$lib/server/spotify";
-import { computeStageRules } from "$lib/server/rules/stage";
+import {
+  computeStageRules,
+  getSubmitErrorMessage,
+} from "$lib/server/rules/stage";
 import {
   submitSchema,
   voteSchema,
@@ -43,13 +46,9 @@ export const submitTrack = form(submitSchema, async (data, invalid) => {
     return;
   }
 
-  if (!rules.inSubmissionPhase) {
-    invalid("Submission deadline has passed");
-    return;
-  }
-
-  if (userSubmissions.length >= rules.maxSubmissions) {
-    invalid(`Maximum ${rules.maxSubmissions} submission(s) allowed`);
+  const submitError = getSubmitErrorMessage(rules);
+  if (submitError) {
+    invalid(submitError);
     return;
   }
 

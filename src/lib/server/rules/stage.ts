@@ -56,8 +56,7 @@ export function computeStageRules(input: {
     stage.phase === "submission" && now < stage.submissionDeadline;
 
   const inVotingPhase =
-    stage.phase === "voting" ||
-    (now >= stage.submissionDeadline && now < stage.votingDeadline);
+    now >= stage.submissionDeadline && now < stage.votingDeadline;
 
   const canVote =
     inVotingPhase &&
@@ -86,4 +85,15 @@ export function computeStageRules(input: {
     isCreator,
     canCreatePlaylist,
   };
+}
+
+type SubmitRules = Pick<
+  ReturnType<typeof computeStageRules>,
+  "canSubmit" | "inSubmissionPhase" | "maxSubmissions"
+>;
+
+export function getSubmitErrorMessage(rules: SubmitRules): string | null {
+  if (rules.canSubmit) return null;
+  if (!rules.inSubmissionPhase) return "Submission deadline has passed";
+  return `Maximum ${rules.maxSubmissions} submission(s) allowed`;
 }
