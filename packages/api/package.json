@@ -1,0 +1,28 @@
+{
+  "name": "@auxchamp/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@auxchamp/auth": "workspace:*",
+    "@auxchamp/db": "workspace:*",
+    "@auxchamp/env": "workspace:*",
+    "@orpc/client": "catalog:",
+    "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
+    "dotenv": "catalog:"
+  },
+  "devDependencies": {
+    "@auxchamp/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

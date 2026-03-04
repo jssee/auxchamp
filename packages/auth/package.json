@@ -1,0 +1,25 @@
+{
+  "name": "@auxchamp/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@auxchamp/db": "workspace:*",
+    "@auxchamp/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:"
+  },
+  "devDependencies": {
+    "@auxchamp/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

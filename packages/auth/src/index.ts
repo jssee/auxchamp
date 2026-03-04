@@ -1,0 +1,30 @@
+import { db } from "@auxchamp/db";
+import * as schema from "@auxchamp/db/schema/auth";
+import { env } from "@auxchamp/env/server";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+
+type CreateAuthOptions = Pick<BetterAuthOptions, "plugins">;
+
+export function createAuth({ plugins = [] }: CreateAuthOptions = {}) {
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: "pg",
+      schema,
+    }),
+    trustedOrigins: [env.CORS_ORIGIN],
+    emailAndPassword: {
+      enabled: true,
+    },
+    advanced: {
+      defaultCookieAttributes: {
+        sameSite: "none",
+        secure: true,
+        httpOnly: true,
+      },
+    },
+    plugins,
+  });
+}
+
+export const auth = createAuth();

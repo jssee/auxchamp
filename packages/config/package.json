@@ -1,0 +1,8 @@
+{
+  "name": "@auxchamp/config",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check-types": "echo 'No typecheck targets in @auxchamp/config'"
+  }
+}
