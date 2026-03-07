@@ -2,21 +2,28 @@
 
 ## Purpose
 
-This document updates the original implementation plan to match the **current** Auxchamp repo.
+This document updates the original implementation plan to match the **current** Auxchamp repo and the **current delivery goal**.
 
-The old version assumed an empty repository and an unspecified app/API stack.
-That is no longer true.
+The old version assumed we should build the full game loop in milestone order:
 
-Current baseline:
+1. schema
+2. domain core
+3. commands
+4. read models
+5. transport wiring
+6. Spotify integration
+7. verification
 
-- SvelteKit app in `apps/web`
-- shared packages in `packages/*`
-- oRPC + OpenAPI handler wiring already in place
-- Better Auth already integrated
-- Drizzle + Neon Postgres client already integrated
-- Bun + Turborepo + oxlint/oxfmt + lefthook already integrated
+That sequencing is too bottom-up for the current goal.
 
-This plan keeps the same game domain from `2026-03-05-DESIGN.md`, but maps implementation work onto today’s package boundaries and conventions.
+Current goal:
+
+- get a small but real demo working
+- exercise the main package boundaries
+- learn how the domains fit together in this codebase
+- avoid building infrastructure ahead of the first usable slice
+
+So this plan keeps the same game domain from `2026-03-05-DESIGN.md`, but reorganizes the work into **vertical milestones**. Schema and domain work still matter, but they now sit inside the first demo milestone instead of standing alone as milestones.
 
 ---
 
@@ -33,12 +40,11 @@ Do not collapse these into one package for speed.
 
 ### 2) Framework-specific code stays in `apps/web`
 
-`packages/auth` already follows this pattern (shared `createAuth`, app-level SvelteKit plugin wiring).
-Game code should do the same.
+`packages/auth` already follows this pattern. Game code should do the same.
 
 ### 3) Shared business logic lives in `packages/api`
 
-Both transports (SvelteKit remote functions and oRPC handlers) should call the same service/query functions.
+SvelteKit remote functions and any future oRPC handlers should call the same service/query functions.
 Do not duplicate game rules in handlers.
 
 ### 4) Schema ownership stays in `packages/db`
@@ -47,40 +53,39 @@ All game tables and relations belong in `packages/db/src/schema/*`, exported fro
 
 ### 5) Typed env remains centralized
 
-Add new env vars to `@auxchamp/env` (`server.ts` or `web.ts`) instead of reading raw `process.env` in feature code.
+Add new env vars to `@auxchamp/env` instead of reading raw `process.env` in feature code.
 
 ---
 
 ## Working assumptions
 
-- Domain model and rules in `docs/2026-03-05-DESIGN.md` remain valid.
+- The domain model and rules in `docs/2026-03-05-DESIGN.md` remain the source of truth.
 - `game` is the aggregate root.
 - Table naming remains singular (`game`, `player`, `round`, etc.).
-- IDs remain NanoID-based (explicitly add dependency; currently not first-class in workspace deps).
-- MVP still requires exactly 3 stars, distinct submissions, no self-vote.
-- MVP start rule remains: at least 4 active players and at least 1 round.
-- MVP shortfall rule remains: <4 submissions at submission close => round is scored/void and flow advances.
+- IDs remain NanoID-based.
+- The first demo should prove the app stack, not the full game loop.
+- We should favor one thin vertical slice over broad backend completeness.
 
 ---
 
 ## Scope
 
-### In scope
+### In scope for the overall plan
 
-- game lifecycle (draft -> active -> completed)
-- rounds, invites, joins/leaves/removals
+- game lifecycle (`draft -> active -> completed`)
+- rounds, invites, joins, starts
 - submissions, ballots, scoring
-- transition engine (time-driven)
-- Spotify playlist integration at submission->voting transition
+- transition logic
 - app transport wiring using current repo conventions
+- Spotify playlist integration at submission -> voting transition
 
-### Out of scope (for first pass)
+### Out of scope for the overall plan
 
-- notifications/reminders
+- notifications and reminders
 - generic workflow engine
 - generalized repository abstraction layer
-- materialized score/projection tables
-- reopen history/admin tooling beyond manual SQL
+- materialized score tables
+- admin tooling beyond what MVP needs
 - rich operational analytics
 
 ---
@@ -103,15 +108,15 @@ packages/
           ballot.ts
           star.ts
           index.ts
-      migrations/             # generated under src/migrations
+      migrations/
 
   api/
     src/
-      index.ts                 # procedure builders / middleware
+      index.ts
       context.ts
       routers/
-        index.ts               # appRouter composition
-        game.ts                # game router surface
+        index.ts
+        game.ts
       game/
         types.ts
         actions.ts
@@ -131,10 +136,10 @@ apps/
   web/
     src/
       lib/
-        app.remote.ts          # existing
-        game.remote.ts         # first-party app command/query wrappers
+        app.remote.ts
+        game.remote.ts
         server/
-          orpc-handlers.ts     # already present
+          orpc-handlers.ts
       routes/
         rpc/[...rpc]/+server.ts
         api-reference/[...openapi]/+server.ts
@@ -149,9 +154,25 @@ Notes:
 
 ---
 
-## Delivery plan
+## Delivery strategy
 
-### Milestone 0: repo prep (minimal, explicit)
+Build the app in **vertical milestones**.
+
+That means each milestone should end in something a human can try, not just a deeper internal layer.
+
+### What changed
+
+The old standalone milestones for **schema** and **domain core** are now **tasks inside Milestone 1**.
+
+Reason:
+
+- schema alone is not demoable
+- domain core alone is not demoable
+- we need the first useful slice to cross DB, API, auth, and UI together
+
+---
+
+## Milestone 0: repo prep
 
 ### Goal
 
@@ -159,226 +180,283 @@ Prepare the workspace for game feature work without changing architecture.
 
 ### Tasks
 
-- Add NanoID dependency where ID creation lives (likely `@auxchamp/api` or `@auxchamp/db`).
-- Add a small shared ID helper (`createId()`) and use it consistently.
-- Establish game schema folder exports in `packages/db/src/schema/game/index.ts` and `packages/db/src/schema/index.ts`.
-- Confirm migration workflow uses existing DB scripts (`bun run db:generate`, `bun run db:push`, `bun run db:migrate`).
+- Add NanoID dependency where ID creation lives.
+- Add a small shared ID helper and use it consistently.
+- Establish game schema barrel exports in `packages/db/src/schema/game/index.ts` and `packages/db/src/schema/index.ts`.
+- Confirm migration workflow uses existing scripts:
+  - `bun run db:generate`
+  - `bun run db:push`
+  - `bun run db:migrate`
 
 ### Done when
 
-- IDs are generated from one helper
-- schema barrel exports are stable
-- migration commands run with no path hacks
+- IDs are generated from one helper.
+- Schema barrel exports are stable.
+- Migration commands run with no path hacks.
 
 ---
 
-### Milestone 1: game schema in `@auxchamp/db`
+## Milestone 1: playable lobby + submission demo
 
 ### Goal
 
-Encode core game records and cheap invariants in Postgres.
+Ship the first real vertical slice:
 
-### Tasks
+- create a game
+- add rounds
+- invite players
+- accept invites
+- start the game
+- submit songs for round 1
 
-Implement tables:
+This is the first milestone because it proves the stack end to end without pulling in the hardest gameplay rules too early.
+
+### Why this is the cutoff
+
+Stopping earlier at schema or domain core gives us infrastructure, not a demo.
+
+Going further into voting, scoring, transitions, and Spotify adds the most complex rules before we know whether the basic repo flow feels good.
+
+This milestone is the smallest slice that is both:
+
+- technically meaningful
+- demoable by humans
+
+### In scope
+
+#### Minimal schema
+
+Implement only the records needed for draft setup, lobby flow, game start, and round 1 submission:
 
 - `game`
 - `player`
 - `round`
 - `submission`
+
+For this milestone, keep DB constraints cheap and structural:
+
+- one `player` per `(game_id, user_id)`
+- one `round` per `(game_id, number)`
+- one `submission` per `(round_id, player_id)`
+- positive timing-window values
+
+Defer for now:
+
 - `ballot`
 - `star`
 
-Keep DB-level constraints for uniqueness/shape only:
+#### Minimal domain core
 
-- one `player` per `(game_id, user_id)`
-- one creator per game
-- one `round` per `(game_id, number)`
-- one `submission` per `(round_id, player_id)`
-- one `ballot` per `(round_id, player_id)`
-- one `star` per `(ballot_id, submission_id)`
-- positive timing window checks
-
-Do not force these in DB yet:
-
-- exactly 3 stars per ballot
-- self-vote ban
-- active-player-only writes
-
-### Done when
-
-- schema compiles and migrates
-- schema exports remain consumable via `@auxchamp/db/schema/*`
-
----
-
-### Milestone 2: domain core in `@auxchamp/api`
-
-### Goal
-
-Centralize game rules and transitions in package-level service functions.
-
-### Tasks
-
-Add modules in `packages/api/src/game/`:
-
-- action vocabulary (`Action` union)
-- capability context loader
-- `getAllowedActions`
-- lock helper(s)
-- `transitionGame`
-- scoring helpers
-
-Command pattern (all writes):
-
-1. transaction start
-2. lock aggregate rows
-3. run `transitionGame`
-4. load capability context
-5. assert required action + command invariants
-6. write
-
-### Done when
-
-- no rule duplication in router/UI layers
-- every write command follows one transaction pattern
-
----
-
-### Milestone 3: game commands
-
-### Goal
-
-Ship command surface for draft/lobby/start/submission/voting.
-
-### Commands
+Implement only the command surface needed for the demo:
 
 - `createGame`
-- `updateGame`
 - `addRound`
-- `updateFutureRound`
 - `invitePlayer`
 - `acceptInvite`
-- `leaveGame`
-- `removePlayer`
 - `startGame`
 - `upsertSubmission`
-- `deleteSubmission`
-- `upsertBallot`
 
-### Done when
+Keep each write small and explicit.
 
-- creator can assemble and start a valid game
-- active players can submit and vote under all MVP constraints
+Use one transaction per command. `startGame` should move the game to `active` and open round 1 in the same transaction. `upsertSubmission` should only succeed for an active player on the active round while submission is open.
 
----
+Do not build architecture that this slice does not use.
 
-### Milestone 4: read models + scoring queries
+Defer unless clearly required:
 
-### Goal
+- full capability matrix
+- generic transition engine
+- scoring helpers
+- Spotify adapter
+- full oRPC surface parity
 
-Expose minimal read surfaces for app and API consumers.
+#### Minimal read model
 
-### Queries
+Add only the reads needed to render the demo flow.
 
-- game detail
-- player list
-- round list/current round
-- round results (submission + star totals + winner flag)
-- game leaderboard/champion
+Prefer one clear game-detail query if it can return:
 
-### Done when
+- game metadata
+- player list and statuses
+- round list
+- current active round
+- current actor submission state
+- simple per-round submission status for the lobby page
 
-- all required screens and API responses can be built from explicit query functions
+#### Minimal web transport and UI
 
----
+Use SvelteKit remote functions first.
 
-### Milestone 5: transport wiring (current stack)
+Add:
 
-### Goal
+- `apps/web/src/lib/game.remote.ts`
+- a create-game path
+- a game detail / lobby path
+- invite-accept flow
+- start-game action
+- submission form for the active round
 
-Expose the same domain functions through existing transport surfaces.
+Do **not** require matching oRPC routes in this milestone.
 
-### Tasks
+### Rules to keep now
 
-- Add `packages/api/src/routers/game.ts` and compose into `appRouter`.
-- Keep handlers thin: parse/auth/call/map error.
-- Add `apps/web/src/lib/game.remote.ts` for first-party SvelteKit pages.
-- Keep remote functions and oRPC paths calling shared `packages/api/src/game/*` code.
+These rules shape the domain and should be enforced in Milestone 1:
 
-### Done when
-
-- game flow works from app pages
-- oRPC endpoints expose equivalent capability without duplicated rules
-
----
-
-### Milestone 6: Spotify integration
-
-### Goal
-
-Create/store playlist IDs at submission->voting transition with a clear boundary.
+- a game must have at least 1 round before start
+- a game should require at least 4 active players before start
+- only active players may submit
+- only the active round may accept submissions
+- one submission per player per round
+- players may edit only their own submission while submission is open
 
 ### Tasks
 
-- define playlist adapter interface in `packages/api/src/integrations/spotify`
-- fake adapter for tests/dev
-- real adapter with env-driven credentials
-- wire adapter call in `closeSubmissionAndOpenVoting`
+1. **Schema + migration in `@auxchamp/db`**
+   - add `game`, `player`, `round`, `submission`
+   - add only structural DB constraints needed now
+   - wire schema exports cleanly
 
-Shortcut cost (intentional):
+2. **Command services in `@auxchamp/api`**
+   - implement `createGame`, `addRound`, `invitePlayer`, `acceptInvite`, `startGame`, `upsertSubmission`
+   - keep invariants close to the write path
+   - keep transaction and locking behavior simple but correct for start and submission
 
-- inline call may orphan playlist if external call succeeds and DB transaction fails
+3. **Read query in `@auxchamp/api`**
+   - add the minimum game-detail read needed to render the lobby and submission state
+   - avoid premature query fragmentation
+
+4. **App flow in `apps/web`**
+   - add `game.remote.ts`
+   - wire simple pages/forms for create, join, start, and submit
+   - optimize for clarity, not polished UX
+
+5. **Verification**
+   - add basic tests for start and submission rules
+   - manually run the full demo flow with multiple users
+
+### Demo definition
+
+A good Milestone 1 demo is:
+
+1. User A signs in and creates a game.
+2. User A adds 1 or more rounds.
+3. User A invites 3 other users.
+4. Those users accept.
+5. User A starts the game.
+6. Round 1 appears as active.
+7. Players submit Spotify track URLs and optional notes.
+8. The game page shows who has submitted and who has not.
+
+### Done when
+
+- one end-to-end flow works from SvelteKit UI -> remote function -> API/domain -> DB
+- the main package boundaries are respected
+- the happy path is demoable by humans
+- `bun run check` passes
+- `bun run check-types` passes
+
+### Explicitly out of scope
+
+Do not include these in Milestone 1:
+
+- voting
+- ballots / stars
+- scoring
+- leaderboard / champion
+- automatic submission -> voting transition
+- Spotify integration
+- removal and leave edge cases beyond what the happy path needs
+- full capability system
+- full oRPC parity
+
+Shortcut cost:
+
+- Milestone 1 will not prove the complete game loop
 
 Replacement condition:
 
-- introduce outbox + retry worker when operational reliability becomes a requirement
+- after Milestone 1 is stable, the next milestone should add voting and scoring, because that is the first real gameplay complexity wall
 
 ---
 
-### Milestone 7: verification
+## Milestone 2: voting + scoring vertical slice
 
 ### Goal
 
-Prove correctness before calling MVP ready.
+Extend the demo from “players can submit” to “a round can complete and produce results.”
 
-### Test layers
+### In scope
 
-- **unit (`bun:test`)** in `packages/api/src/game/*.test.ts`
-  - capabilities
-  - scoring
-  - transition branches
-- **integration (`bun:test`)** with DB-backed flows
-  - command success/failure cases
-  - uniqueness + constraints
-  - join/leave edge behavior
-- **concurrency tests**
-  - stale submit/vote writes rejected
-  - removal/write race behavior
+- `ballot` and `star` schema
+- `upsertBallot`
+- voting invariants:
+  - exactly 3 stars
+  - 3 distinct submissions
+  - no self-vote
+  - all starred submissions belong to the same round
+- round result query
+- game leaderboard / champion query
+- enough transition logic to move from submission to voting to scored
 
-### Minimum verification commands
+### Done when
 
-- `bun run check`
-- `bun run check-types`
-- package test runs (as added)
-- DB migration from empty database
+- a round can go from submitting -> voting -> scored
+- results can be displayed
+- cumulative scoring works for the game
 
 ---
 
-## First thin slice (fastest useful path)
+## Milestone 3: transport parity + Spotify integration
 
-1. game schema
-2. `createGame`
-3. `addRound`
-4. `invitePlayer` + `acceptInvite`
-5. `startGame`
-6. `upsertSubmission`
-7. `transitionGame` with fake playlist adapter
-8. `upsertBallot`
-9. leaderboard query
-10. wire to `game.remote.ts` + router
+### Goal
 
-This yields a complete vertical slice in the current monorepo without inventing new architecture.
+Expose the shared game domain cleanly across transport surfaces and add the playlist integration boundary.
+
+### In scope
+
+- `packages/api/src/routers/game.ts`
+- compose game router into `appRouter`
+- keep handlers thin: parse, auth, call, map error
+- define playlist adapter interface
+- fake playlist adapter for tests/dev
+- real Spotify adapter with env-driven credentials
+- wire playlist creation into submission -> voting transition
+
+### Done when
+
+- the same game domain functions are reachable through app paths and oRPC
+- Spotify integration works behind a clear adapter boundary
+
+### Shortcut cost
+
+Inline playlist creation may orphan a playlist if the external call succeeds and the DB transaction fails.
+
+### Replacement condition
+
+Introduce an outbox + retry worker when operational reliability becomes a requirement.
+
+---
+
+## Milestone 4: hardening and edge cases
+
+### Goal
+
+Make the MVP resistant to concurrency, stale writes, and the first wave of unhappy paths.
+
+### In scope
+
+- stronger locked transaction patterns for all writes
+- capability cleanup if needed
+- leave/remove edge behavior
+- shortfall handling for too few submissions
+- concurrency tests
+- DB-backed integration tests
+
+### Done when
+
+- stale submit/vote writes are rejected
+- transition behavior is deterministic under concurrent access
+- the major unhappy paths are covered by tests
 
 ---
 
@@ -387,23 +465,21 @@ This yields a complete vertical slice in the current monorepo without inventing 
 1. **Rule duplication across transport layers**
    - Keep domain logic in `packages/api/src/game/*` only.
 2. **Over-abstracting early**
-   - No generic FSM or repository layer in MVP.
-3. **Concurrency regressions**
-   - Compute permissions and writes in one locked transaction.
-4. **Spotify scope creep**
-   - Keep adapter boundary strict; delay reliability machinery until needed.
+   - No generic FSM or repository layer in Milestone 1.
+3. **Premature completeness**
+   - Do not build voting, scoring, or Spotify before the first demo works.
+4. **Concurrency regressions**
+   - Compute permissions and writes in one transaction once the write paths become more complex.
 
 ---
 
 ## Exit criteria
 
-MVP backend+app flow is ready when:
+The app is ready to move beyond MVP slices when:
 
-- draft game setup works end-to-end
-- invite/join/start rules are enforced
-- submission and voting windows enforce all MVP constraints
-- round transitions run deterministically
-- scoring/champion queries are correct
-- first-party app flows work through current SvelteKit structure
-- oRPC surface is wired without duplicating rules
+- draft game setup works end to end
+- invite, join, start, submit, vote, and score rules are enforced
+- round transitions are deterministic
+- first-party app flows work through the current SvelteKit structure
+- shared game logic is not duplicated across transports
 - verification commands pass
