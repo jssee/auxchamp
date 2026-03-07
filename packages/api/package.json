@@ -2,17 +2,11 @@
   "name": "@auxchamp/api",
   "type": "module",
   "exports": {
-    ".": {
-      "default": "./src/index.ts"
+    "./context": {
+      "default": "./src/context.ts"
     },
-    "./game": {
-      "default": "./src/game/index.ts"
-    },
-    "./game/*": {
-      "default": "./src/game/*.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
+    "./routers": {
+      "default": "./src/routers/index.ts"
     }
   },
   "scripts": {

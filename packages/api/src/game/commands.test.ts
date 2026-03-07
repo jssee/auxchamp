@@ -9,7 +9,7 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game, player, round } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { addRound, createGame } = await import("@auxchamp/api/game");
+const { addRound, createGame } = await import("./commands");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
