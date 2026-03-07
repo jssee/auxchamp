@@ -68,6 +68,7 @@
         "@orpc/server": "catalog:",
         "dotenv": "catalog:",
         "nanoid": "^3.3.11",
+        "valibot": "catalog:",
       },
       "devDependencies": {
         "@auxchamp/config": "workspace:*",
