@@ -5,6 +5,18 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./schema": {
+      "default": "./src/schema/index.ts"
+    },
+    "./schema/*": {
+      "default": "./src/schema/*.ts"
+    },
+    "./schema/game": {
+      "default": "./src/schema/game/index.ts"
+    },
+    "./schema/game/*": {
+      "default": "./src/schema/game/*.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
