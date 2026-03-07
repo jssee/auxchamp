@@ -21,6 +21,7 @@
     "@orpc/valibot": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "runed": "^0.37.1",
     "valibot": "catalog:"
   },
   "devDependencies": {

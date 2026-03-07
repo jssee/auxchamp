@@ -31,7 +31,23 @@ Auxchamp is a TypeScript monorepo centered on a SvelteKit app.
 bun install
 ```
 
-### 3) Create `apps/web/.env`
+### 3) Sync env from Vercel
+
+Vercel is the source of truth for env vars.
+
+From the repo root, pull env vars into the web app:
+
+```bash
+vercel env pull apps/web/.env
+```
+
+Notes:
+
+- Run this from the repo root. The linked Vercel project lives in `/.vercel`.
+- `apps/web/.env` is the canonical local env file.
+- Do not create or use a root `.env` file.
+
+If you are not using Vercel yet, create `apps/web/.env` with:
 
 ```env
 PUBLIC_SERVER_URL=http://localhost:5173
