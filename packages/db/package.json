@@ -32,10 +32,12 @@
     "@auxchamp/env": "workspace:*",
     "@neondatabase/serverless": "^1.0.2",
     "dotenv": "catalog:",
-    "drizzle-orm": "^0.45.1"
+    "drizzle-orm": "^0.45.1",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@auxchamp/config": "workspace:*",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.31.8",
     "typescript": "catalog:"
   }

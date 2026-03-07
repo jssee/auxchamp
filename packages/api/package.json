@@ -5,6 +5,12 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./game": {
+      "default": "./src/game/index.ts"
+    },
+    "./game/*": {
+      "default": "./src/game/*.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
@@ -19,7 +25,8 @@
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
-    "dotenv": "catalog:"
+    "dotenv": "catalog:",
+    "nanoid": "^3.3.11"
   },
   "devDependencies": {
     "@auxchamp/config": "workspace:*",
