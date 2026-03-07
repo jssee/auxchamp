@@ -83,6 +83,4 @@ bun run db:push      # sync schema to DB
 
 ## Architecture notes
 
-If you need project decisions and boundaries, start here:
-
-- [`docs/architecture/orpc-sveltekit-boundary.md`](docs/architecture/orpc-sveltekit-boundary.md)
+- [`docs/BOUNDARIES.md`](docs/BOUNDARIES.md) — API and remote function responsibilities
