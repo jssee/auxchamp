@@ -9,7 +9,7 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game, player, round } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { addRound, createGame } = await import("./commands");
+const { acceptInvite, addRound, createGame, invitePlayer } = await import("./commands");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -170,6 +170,180 @@ test("addRound rejects creator writes once the game is active", async () => {
   });
 
   expect(createdRounds).toHaveLength(0);
+});
+
+// -- invitePlayer ---------------------------------------------------------
+
+test("invitePlayer creates an invited player row", async () => {
+  const creator = await createTestUser();
+  const invitee = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Invite test",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  const result = await invitePlayer(creator.id, {
+    gameId: draftGame.gameId,
+    targetUserId: invitee.id,
+  });
+
+  const [invitedPlayer] = await db
+    .select()
+    .from(player)
+    .where(and(eq(player.gameId, draftGame.gameId), eq(player.userId, invitee.id)));
+
+  expect(result).toMatchObject({
+    playerId: expect.any(String),
+    gameId: draftGame.gameId,
+    userId: invitee.id,
+    status: "invited",
+  });
+  expect(invitedPlayer).toMatchObject({
+    role: "player",
+    status: "invited",
+  });
+});
+
+test("invitePlayer rejects non-creator", async () => {
+  const creator = await createTestUser();
+  const other = await createTestUser();
+  const target = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Non-creator invite",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  await expect(
+    invitePlayer(other.id, {
+      gameId: draftGame.gameId,
+      targetUserId: target.id,
+    }),
+  ).rejects.toThrow("Only the creator can invite players to a draft game.");
+});
+
+test("invitePlayer rejects duplicate invite", async () => {
+  const creator = await createTestUser();
+  const invitee = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Duplicate invite",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  await invitePlayer(creator.id, {
+    gameId: draftGame.gameId,
+    targetUserId: invitee.id,
+  });
+
+  await expect(
+    invitePlayer(creator.id, {
+      gameId: draftGame.gameId,
+      targetUserId: invitee.id,
+    }),
+  ).rejects.toThrow("Player is already in this game.");
+});
+
+test("invitePlayer rejects invite to non-draft game", async () => {
+  const creator = await createTestUser();
+  const invitee = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Active game invite",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  await db.update(game).set({ state: "active" }).where(eq(game.id, draftGame.gameId));
+
+  await expect(
+    invitePlayer(creator.id, {
+      gameId: draftGame.gameId,
+      targetUserId: invitee.id,
+    }),
+  ).rejects.toThrow("Only the creator can invite players to a draft game.");
+});
+
+// -- acceptInvite ---------------------------------------------------------
+
+test("acceptInvite activates an invited player", async () => {
+  const creator = await createTestUser();
+  const invitee = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Accept test",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  await invitePlayer(creator.id, {
+    gameId: draftGame.gameId,
+    targetUserId: invitee.id,
+  });
+
+  const result = await acceptInvite(invitee.id, { gameId: draftGame.gameId });
+
+  const [acceptedPlayer] = await db
+    .select()
+    .from(player)
+    .where(and(eq(player.gameId, draftGame.gameId), eq(player.userId, invitee.id)));
+
+  expect(result).toMatchObject({
+    gameId: draftGame.gameId,
+    userId: invitee.id,
+    status: "active",
+  });
+  expect(acceptedPlayer).toMatchObject({
+    status: "active",
+    joinedAt: expect.any(Date),
+  });
+});
+
+test("acceptInvite rejects if no pending invite", async () => {
+  const stranger = await createTestUser();
+  const creator = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "No invite",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  await expect(acceptInvite(stranger.id, { gameId: draftGame.gameId })).rejects.toThrow(
+    "No pending invite found.",
+  );
+});
+
+test("acceptInvite rejects if already active", async () => {
+  const creator = await createTestUser();
+  const invitee = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Already accepted",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  await invitePlayer(creator.id, {
+    gameId: draftGame.gameId,
+    targetUserId: invitee.id,
+  });
+  await acceptInvite(invitee.id, { gameId: draftGame.gameId });
+
+  await expect(acceptInvite(invitee.id, { gameId: draftGame.gameId })).rejects.toThrow(
+    "No pending invite found.",
+  );
 });
 
 async function createTestUser() {

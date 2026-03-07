@@ -17,6 +17,15 @@ export type AddRoundInput = {
   description?: string | null;
 };
 
+export type InvitePlayerInput = {
+  gameId: string;
+  targetUserId: string;
+};
+
+export type AcceptInviteInput = {
+  gameId: string;
+};
+
 export async function createGame(actorUserId: string, input: CreateGameInput) {
   return db.transaction(async (tx) => {
     const gameId = nanoid();
@@ -86,6 +95,80 @@ export async function addRound(actorUserId: string, input: AddRoundInput) {
       number: nextNumber,
       theme: input.theme,
       description: input.description ?? null,
+    };
+  });
+}
+
+export async function invitePlayer(actorUserId: string, input: InvitePlayerInput) {
+  return db.transaction(async (tx) => {
+    const [draftGame] = await tx
+      .select({ state: game.state })
+      .from(game)
+      .where(eq(game.id, input.gameId))
+      .limit(1);
+    const [creatorPlayer] = await tx
+      .select({ role: player.role })
+      .from(player)
+      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .limit(1);
+
+    if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
+      throw new Error("Only the creator can invite players to a draft game.");
+    }
+
+    const [existing] = await tx
+      .select({ id: player.id })
+      .from(player)
+      .where(and(eq(player.gameId, input.gameId), eq(player.userId, input.targetUserId)))
+      .limit(1);
+
+    if (existing) {
+      throw new Error("Player is already in this game.");
+    }
+
+    const playerId = nanoid();
+
+    await tx.insert(player).values({
+      id: playerId,
+      gameId: input.gameId,
+      userId: input.targetUserId,
+      role: "player",
+      status: "invited",
+    });
+
+    return {
+      playerId,
+      gameId: input.gameId,
+      userId: input.targetUserId,
+      status: "invited" as const,
+    };
+  });
+}
+
+export async function acceptInvite(actorUserId: string, input: AcceptInviteInput) {
+  return db.transaction(async (tx) => {
+    const [invitedPlayer] = await tx
+      .select({ id: player.id, status: player.status })
+      .from(player)
+      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .limit(1);
+
+    if (invitedPlayer?.status !== "invited") {
+      throw new Error("No pending invite found.");
+    }
+
+    const now = new Date();
+
+    await tx
+      .update(player)
+      .set({ status: "active", joinedAt: now })
+      .where(eq(player.id, invitedPlayer.id));
+
+    return {
+      playerId: invitedPlayer.id,
+      gameId: input.gameId,
+      userId: actorUserId,
+      status: "active" as const,
     };
   });
 }

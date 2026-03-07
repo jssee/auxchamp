@@ -1,7 +1,12 @@
 import type { RouterClient } from "@orpc/server";
 
 import { protectedProcedure, publicProcedure } from "../index";
-import { addRoundProcedure, createGameProcedure } from "../game/procedures";
+import {
+  acceptInviteProcedure,
+  addRoundProcedure,
+  createGameProcedure,
+  invitePlayerProcedure,
+} from "../game/procedures";
 import { getHealthCheck, getPrivateData } from "../queries";
 
 export const appRouter = {
@@ -14,6 +19,8 @@ export const appRouter = {
   game: {
     create: createGameProcedure,
     addRound: addRoundProcedure,
+    invitePlayer: invitePlayerProcedure,
+    acceptInvite: acceptInviteProcedure,
   },
 };
 export type AppRouter = typeof appRouter;

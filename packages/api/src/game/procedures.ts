@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { protectedProcedure } from "../index";
-import { createGame, addRound } from "./commands";
+import { acceptInvite, addRound, createGame, invitePlayer } from "./commands";
 
 const createGameSchema = v.object({
   name: v.string(),
@@ -26,4 +26,25 @@ export const addRoundProcedure = protectedProcedure
   .input(addRoundSchema)
   .handler(({ context, input }) => {
     return addRound(context.session.user.id, input);
+  });
+
+const invitePlayerSchema = v.object({
+  gameId: v.string(),
+  targetUserId: v.string(),
+});
+
+export const invitePlayerProcedure = protectedProcedure
+  .input(invitePlayerSchema)
+  .handler(({ context, input }) => {
+    return invitePlayer(context.session.user.id, input);
+  });
+
+const acceptInviteSchema = v.object({
+  gameId: v.string(),
+});
+
+export const acceptInviteProcedure = protectedProcedure
+  .input(acceptInviteSchema)
+  .handler(({ context, input }) => {
+    return acceptInvite(context.session.user.id, input);
   });
