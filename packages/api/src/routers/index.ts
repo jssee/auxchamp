@@ -6,6 +6,8 @@ import {
   addRoundProcedure,
   createGameProcedure,
   invitePlayerProcedure,
+  startGameProcedure,
+  upsertSubmissionProcedure,
 } from "../game/procedures";
 import { getHealthCheck, getPrivateData } from "../queries";
 
@@ -21,6 +23,8 @@ export const appRouter = {
     addRound: addRoundProcedure,
     invitePlayer: invitePlayerProcedure,
     acceptInvite: acceptInviteProcedure,
+    start: startGameProcedure,
+    upsertSubmission: upsertSubmissionProcedure,
   },
 };
 export type AppRouter = typeof appRouter;

@@ -7,9 +7,10 @@ dotenv.config({
 });
 
 const { db } = await import("@auxchamp/db");
-const { game, player, round } = await import("@auxchamp/db/schema/game");
+const { game, player, round, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer } = await import("./commands");
+const { acceptInvite, addRound, createGame, invitePlayer, startGame, upsertSubmission } =
+  await import("./commands");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -345,6 +346,203 @@ test("acceptInvite rejects if already active", async () => {
     "No pending invite found.",
   );
 });
+
+// -- startGame ------------------------------------------------------------
+
+test("startGame activates a valid draft and opens round 1", async () => {
+  const { gameId, creator } = await setupLobby();
+
+  const result = await startGame(creator.id, { gameId });
+
+  const [startedGame] = await db.select().from(game).where(eq(game.id, gameId));
+  const [firstRound] = await db
+    .select()
+    .from(round)
+    .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+
+  expect(result).toMatchObject({ gameId, state: "active" });
+  expect(startedGame).toMatchObject({ state: "active" });
+  expect(startedGame!.startedAt).toBeInstanceOf(Date);
+  expect(firstRound).toMatchObject({ phase: "submitting" });
+  expect(firstRound!.submissionOpensAt).toBeInstanceOf(Date);
+  expect(firstRound!.submissionClosesAt).toBeInstanceOf(Date);
+});
+
+test("startGame rejects non-creator", async () => {
+  const { gameId, players } = await setupLobby();
+
+  await expect(startGame(players[0]!.id, { gameId })).rejects.toThrow(
+    "Only the creator can start a draft game.",
+  );
+});
+
+test("startGame rejects game with no rounds", async () => {
+  const { gameId, creator } = await setupLobby({ rounds: 0 });
+
+  await expect(startGame(creator.id, { gameId })).rejects.toThrow(
+    "Game must have at least one round.",
+  );
+});
+
+test("startGame rejects game with fewer than four active players", async () => {
+  const { gameId, creator } = await setupLobby({ playerCount: 2 });
+
+  await expect(startGame(creator.id, { gameId })).rejects.toThrow(
+    "Game must have at least four active players.",
+  );
+});
+
+test("startGame rejects non-draft game", async () => {
+  const { gameId, creator } = await setupLobby();
+
+  await db.update(game).set({ state: "active" }).where(eq(game.id, gameId));
+
+  await expect(startGame(creator.id, { gameId })).rejects.toThrow(
+    "Only the creator can start a draft game.",
+  );
+});
+
+// -- upsertSubmission -----------------------------------------------------
+
+test("upsertSubmission creates a submission for the active round", async () => {
+  const { gameId, players } = await setupActiveGame();
+
+  const result = await upsertSubmission(players[0]!.id, {
+    gameId,
+    spotifyTrackUrl: "https://open.spotify.com/track/abc123",
+    note: "Great opener",
+  });
+
+  expect(result).toMatchObject({
+    gameId,
+    spotifyTrackUrl: "https://open.spotify.com/track/abc123",
+    note: "Great opener",
+  });
+
+  const [created] = await db
+    .select()
+    .from(submission)
+    .where(eq(submission.id, result.submissionId));
+
+  expect(created).toMatchObject({
+    spotifyTrackUrl: "https://open.spotify.com/track/abc123",
+    note: "Great opener",
+  });
+});
+
+test("upsertSubmission updates an existing submission", async () => {
+  const { gameId, players } = await setupActiveGame();
+
+  await upsertSubmission(players[0]!.id, {
+    gameId,
+    spotifyTrackUrl: "https://open.spotify.com/track/first",
+  });
+
+  const result = await upsertSubmission(players[0]!.id, {
+    gameId,
+    spotifyTrackUrl: "https://open.spotify.com/track/revised",
+    note: "Changed my mind",
+  });
+
+  expect(result).toMatchObject({
+    spotifyTrackUrl: "https://open.spotify.com/track/revised",
+    note: "Changed my mind",
+  });
+
+  const playerSubmissions = await db
+    .select()
+    .from(submission)
+    .where(eq(submission.playerId, result.playerId));
+
+  expect(playerSubmissions).toHaveLength(1);
+});
+
+test("upsertSubmission rejects non-active player", async () => {
+  const { gameId } = await setupActiveGame();
+  const outsider = await createTestUser();
+
+  await expect(
+    upsertSubmission(outsider.id, {
+      gameId,
+      spotifyTrackUrl: "https://open.spotify.com/track/nope",
+    }),
+  ).rejects.toThrow("Only active players can submit.");
+});
+
+test("upsertSubmission rejects when no round is accepting submissions", async () => {
+  const { gameId, players } = await setupActiveGame();
+
+  // Close the submission round
+  await db
+    .update(round)
+    .set({ phase: "voting" })
+    .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+
+  await expect(
+    upsertSubmission(players[0]!.id, {
+      gameId,
+      spotifyTrackUrl: "https://open.spotify.com/track/late",
+    }),
+  ).rejects.toThrow("No round is currently accepting submissions.");
+});
+
+test("upsertSubmission rejects when submission window has closed", async () => {
+  const { gameId, players } = await setupActiveGame();
+
+  // Set submissionClosesAt to the past
+  await db
+    .update(round)
+    .set({ submissionClosesAt: new Date("2020-01-01") })
+    .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+
+  await expect(
+    upsertSubmission(players[0]!.id, {
+      gameId,
+      spotifyTrackUrl: "https://open.spotify.com/track/expired",
+    }),
+  ).rejects.toThrow("The submission window has closed.");
+});
+
+// -- test helpers ---------------------------------------------------------
+
+/** Create a draft game with a lobby of accepted players. */
+async function setupLobby({ playerCount = 3, rounds = 1 } = {}) {
+  const creator = await createTestUser();
+  const draftGame = await createGame(creator.id, {
+    name: "Test game",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+
+  createdGameIds.add(draftGame.gameId);
+
+  for (let i = 0; i < rounds; i++) {
+    await addRound(creator.id, {
+      gameId: draftGame.gameId,
+      theme: `Round ${i + 1}`,
+    });
+  }
+
+  const players: Awaited<ReturnType<typeof createTestUser>>[] = [];
+  for (let i = 0; i < playerCount; i++) {
+    const p = await createTestUser();
+    await invitePlayer(creator.id, {
+      gameId: draftGame.gameId,
+      targetUserId: p.id,
+    });
+    await acceptInvite(p.id, { gameId: draftGame.gameId });
+    players.push(p);
+  }
+
+  return { gameId: draftGame.gameId, creator, players };
+}
+
+/** Create a started game with round 1 open for submissions. */
+async function setupActiveGame() {
+  const lobby = await setupLobby();
+  await startGame(lobby.creator.id, { gameId: lobby.gameId });
+  return lobby;
+}
 
 async function createTestUser() {
   const id = `user_${crypto.randomUUID()}`;

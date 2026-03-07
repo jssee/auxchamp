@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
-import { game, player, round } from "@auxchamp/db/schema/game";
+import { game, player, round, submission } from "@auxchamp/db/schema/game";
 import { nanoid } from "nanoid";
 
 export type CreateGameInput = {
@@ -24,6 +24,16 @@ export type InvitePlayerInput = {
 
 export type AcceptInviteInput = {
   gameId: string;
+};
+
+export type StartGameInput = {
+  gameId: string;
+};
+
+export type UpsertSubmissionInput = {
+  gameId: string;
+  spotifyTrackUrl: string;
+  note?: string | null;
 };
 
 export async function createGame(actorUserId: string, input: CreateGameInput) {
@@ -169,6 +179,139 @@ export async function acceptInvite(actorUserId: string, input: AcceptInviteInput
       gameId: input.gameId,
       userId: actorUserId,
       status: "active" as const,
+    };
+  });
+}
+
+export async function startGame(actorUserId: string, input: StartGameInput) {
+  return db.transaction(async (tx) => {
+    const [draftGame] = await tx
+      .select({
+        state: game.state,
+        submissionWindowDays: game.submissionWindowDays,
+      })
+      .from(game)
+      .where(eq(game.id, input.gameId))
+      .limit(1);
+    const [creatorPlayer] = await tx
+      .select({ role: player.role })
+      .from(player)
+      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .limit(1);
+
+    if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
+      throw new Error("Only the creator can start a draft game.");
+    }
+
+    const [firstRound] = await tx
+      .select({ id: round.id })
+      .from(round)
+      .where(eq(round.gameId, input.gameId))
+      .orderBy(asc(round.number))
+      .limit(1);
+
+    if (!firstRound) {
+      throw new Error("Game must have at least one round.");
+    }
+
+    const [playerCount] = await tx
+      .select({ activePlayers: count() })
+      .from(player)
+      .where(and(eq(player.gameId, input.gameId), eq(player.status, "active")));
+
+    if (!playerCount || playerCount.activePlayers < 4) {
+      throw new Error("Game must have at least four active players.");
+    }
+
+    const now = new Date();
+    const submissionClosesAt = new Date(now);
+    submissionClosesAt.setDate(submissionClosesAt.getDate() + draftGame.submissionWindowDays);
+
+    await tx.update(game).set({ state: "active", startedAt: now }).where(eq(game.id, input.gameId));
+
+    await tx
+      .update(round)
+      .set({
+        phase: "submitting",
+        submissionOpensAt: now,
+        submissionClosesAt,
+      })
+      .where(eq(round.id, firstRound.id));
+
+    return {
+      gameId: input.gameId,
+      state: "active" as const,
+      startedAt: now,
+      openRoundId: firstRound.id,
+    };
+  });
+}
+
+export async function upsertSubmission(actorUserId: string, input: UpsertSubmissionInput) {
+  return db.transaction(async (tx) => {
+    const [activePlayer] = await tx
+      .select({ id: player.id })
+      .from(player)
+      .where(
+        and(
+          eq(player.gameId, input.gameId),
+          eq(player.userId, actorUserId),
+          eq(player.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (!activePlayer) {
+      throw new Error("Only active players can submit.");
+    }
+
+    const [submittingRound] = await tx
+      .select({
+        id: round.id,
+        submissionClosesAt: round.submissionClosesAt,
+      })
+      .from(round)
+      .where(and(eq(round.gameId, input.gameId), eq(round.phase, "submitting")))
+      .limit(1);
+
+    if (!submittingRound) {
+      throw new Error("No round is currently accepting submissions.");
+    }
+
+    if (submittingRound.submissionClosesAt && submittingRound.submissionClosesAt < new Date()) {
+      throw new Error("The submission window has closed.");
+    }
+
+    const submissionId = nanoid();
+    const now = new Date();
+
+    const [upserted] = await tx
+      .insert(submission)
+      .values({
+        id: submissionId,
+        roundId: submittingRound.id,
+        playerId: activePlayer.id,
+        spotifyTrackUrl: input.spotifyTrackUrl,
+        note: input.note ?? null,
+        submittedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [submission.roundId, submission.playerId],
+        set: {
+          spotifyTrackUrl: input.spotifyTrackUrl,
+          note: input.note ?? null,
+          submittedAt: now,
+        },
+      })
+      .returning();
+
+    return {
+      submissionId: upserted!.id,
+      playerId: activePlayer.id,
+      roundId: submittingRound.id,
+      gameId: input.gameId,
+      spotifyTrackUrl: upserted!.spotifyTrackUrl,
+      note: upserted!.note,
     };
   });
 }

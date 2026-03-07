@@ -1,7 +1,14 @@
 import * as v from "valibot";
 
 import { protectedProcedure } from "../index";
-import { acceptInvite, addRound, createGame, invitePlayer } from "./commands";
+import {
+  acceptInvite,
+  addRound,
+  createGame,
+  invitePlayer,
+  startGame,
+  upsertSubmission,
+} from "./commands";
 
 const createGameSchema = v.object({
   name: v.string(),
@@ -47,4 +54,26 @@ export const acceptInviteProcedure = protectedProcedure
   .input(acceptInviteSchema)
   .handler(({ context, input }) => {
     return acceptInvite(context.session.user.id, input);
+  });
+
+const startGameSchema = v.object({
+  gameId: v.string(),
+});
+
+export const startGameProcedure = protectedProcedure
+  .input(startGameSchema)
+  .handler(({ context, input }) => {
+    return startGame(context.session.user.id, input);
+  });
+
+const upsertSubmissionSchema = v.object({
+  gameId: v.string(),
+  spotifyTrackUrl: v.pipe(v.string(), v.url()),
+  note: v.optional(v.nullable(v.string())),
+});
+
+export const upsertSubmissionProcedure = protectedProcedure
+  .input(upsertSubmissionSchema)
+  .handler(({ context, input }) => {
+    return upsertSubmission(context.session.user.id, input);
   });
