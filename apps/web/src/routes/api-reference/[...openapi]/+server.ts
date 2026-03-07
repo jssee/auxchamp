@@ -1,6 +1,6 @@
 import type { RequestHandler } from "./$types";
 
-import { handleApiReference } from "$lib/server/orpc-handlers";
+import { handleApiReference } from "$lib/server/api/handler";
 
 const handle: RequestHandler = async ({ request }) => {
   const result = await handleApiReference(request);
