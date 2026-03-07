@@ -131,9 +131,17 @@ procedure.
 | User-initiated mutations | Remote function | `command()` via server-side client         |
 | User-initiated fetches   | Remote function | `query()` via server-side client           |
 
-## Current violations
+## Exception: auth transport
 
-`app.remote.ts` imports `getHealthCheck` and `getPrivateData` directly
-from `@auxchamp/api/queries` and performs its own session check. This
-bypasses the router and duplicates the auth middleware. These should be
-migrated to call through the server-side client once it exists.
+`signIn` and `signUp` in `app.remote.ts` call Better Auth's API
+directly (`auth.api.signInEmail`, `auth.api.signUpEmail`). These do not
+go through the oRPC router.
+
+This is intentional. Better Auth has its own request handler, session
+management, and cookie logic. Wrapping it behind oRPC procedures would
+add indirection with no benefit — the auth library is the source of
+truth for authentication, not our API layer.
+
+The rule: **authentication transport** (sign in, sign up, sign out,
+OAuth callbacks) calls Better Auth directly. **Everything else** goes
+through the oRPC router.
