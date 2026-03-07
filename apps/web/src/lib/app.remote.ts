@@ -1,19 +1,21 @@
-import { getHealthCheck, getPrivateData } from "@auxchamp/api/queries";
 import { command, getRequestEvent, query } from "$app/server";
 
+import { createApi } from "./server/api";
 import { signInSchema, signUpSchema } from "./auth-schemas";
 import { auth } from "./auth";
 
 export const healthCheck = query(async () => {
-  return getHealthCheck();
+  const api = createApi(getRequestEvent().request);
+  return api.healthCheck();
 });
 
 export const privateData = query(async () => {
-  const session = await auth.api.getSession({
-    headers: getRequestEvent().request.headers,
-  });
-
-  return session?.user ? getPrivateData(session) : null;
+  const api = createApi(getRequestEvent().request);
+  try {
+    return await api.privateData();
+  } catch {
+    return null;
+  }
 });
 
 export const signIn = command(signInSchema, async (credentials) => {
