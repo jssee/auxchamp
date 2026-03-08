@@ -47,6 +47,9 @@ export async function getGameDetail(actorUserId: string, gameId: string) {
   if (!row) return null;
 
   const actorPlayer = row.players.find((p) => p.userId === actorUserId) ?? null;
+
+  // Only game members can view game detail
+  if (!actorPlayer) return null;
   const activeRound = row.rounds.find((r) => r.phase === "submitting") ?? null;
   const actorSubmission =
     activeRound && actorPlayer

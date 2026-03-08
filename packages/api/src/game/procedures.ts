@@ -16,7 +16,7 @@ import {
 import { getGameDetail } from "./queries";
 
 const createGameSchema = v.object({
-  name: v.string(),
+  name: v.pipe(v.string(), v.minLength(1, "Name is required")),
   description: v.optional(v.nullable(v.string())),
   submissionWindowDays: v.pipe(v.number(), v.integer(), v.minValue(1)),
   votingWindowDays: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -24,7 +24,7 @@ const createGameSchema = v.object({
 
 const addRoundSchema = v.object({
   gameId: v.string(),
-  theme: v.string(),
+  theme: v.pipe(v.string(), v.minLength(1, "Theme is required")),
   description: v.optional(v.nullable(v.string())),
 });
 
@@ -86,7 +86,11 @@ export const startGameProcedure = protectedProcedure
 
 const upsertSubmissionSchema = v.object({
   gameId: v.string(),
-  spotifyTrackUrl: v.pipe(v.string(), v.url()),
+  spotifyTrackUrl: v.pipe(
+    v.string(),
+    v.url(),
+    v.startsWith("https://open.spotify.com/", "Must be a Spotify URL"),
+  ),
   note: v.optional(v.nullable(v.string())),
 });
 

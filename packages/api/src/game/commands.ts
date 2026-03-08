@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { and, asc, count, desc, eq } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
@@ -78,7 +79,9 @@ export async function addRound(actorUserId: string, input: AddRoundInput) {
       .limit(1);
 
     if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
-      throw new Error("Only the creator can add rounds to a draft game.");
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only the creator can add rounds to a draft game.",
+      });
     }
 
     const [lastRound] = await tx
@@ -123,7 +126,9 @@ export async function invitePlayer(actorUserId: string, input: InvitePlayerInput
       .limit(1);
 
     if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
-      throw new Error("Only the creator can invite players to a draft game.");
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only the creator can invite players to a draft game.",
+      });
     }
 
     const [existing] = await tx
@@ -133,7 +138,7 @@ export async function invitePlayer(actorUserId: string, input: InvitePlayerInput
       .limit(1);
 
     if (existing) {
-      throw new Error("Player is already in this game.");
+      throw new ORPCError("CONFLICT", { message: "Player is already in this game." });
     }
 
     const playerId = nanoid();
@@ -164,7 +169,7 @@ export async function acceptInvite(actorUserId: string, input: AcceptInviteInput
       .limit(1);
 
     if (invitedPlayer?.status !== "invited") {
-      throw new Error("No pending invite found.");
+      throw new ORPCError("NOT_FOUND", { message: "No pending invite found." });
     }
 
     const now = new Date();
@@ -200,7 +205,7 @@ export async function startGame(actorUserId: string, input: StartGameInput) {
       .limit(1);
 
     if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
-      throw new Error("Only the creator can start a draft game.");
+      throw new ORPCError("FORBIDDEN", { message: "Only the creator can start a draft game." });
     }
 
     const [firstRound] = await tx
@@ -211,7 +216,7 @@ export async function startGame(actorUserId: string, input: StartGameInput) {
       .limit(1);
 
     if (!firstRound) {
-      throw new Error("Game must have at least one round.");
+      throw new ORPCError("PRECONDITION_FAILED", { message: "Game must have at least one round." });
     }
 
     const [playerCount] = await tx
@@ -220,7 +225,9 @@ export async function startGame(actorUserId: string, input: StartGameInput) {
       .where(and(eq(player.gameId, input.gameId), eq(player.status, "active")));
 
     if (!playerCount || playerCount.activePlayers < 4) {
-      throw new Error("Game must have at least four active players.");
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "Game must have at least four active players.",
+      });
     }
 
     const now = new Date();
@@ -262,7 +269,7 @@ export async function upsertSubmission(actorUserId: string, input: UpsertSubmiss
       .limit(1);
 
     if (!activePlayer) {
-      throw new Error("Only active players can submit.");
+      throw new ORPCError("FORBIDDEN", { message: "Only active players can submit." });
     }
 
     const [submittingRound] = await tx
@@ -275,11 +282,13 @@ export async function upsertSubmission(actorUserId: string, input: UpsertSubmiss
       .limit(1);
 
     if (!submittingRound) {
-      throw new Error("No round is currently accepting submissions.");
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "No round is currently accepting submissions.",
+      });
     }
 
     if (submittingRound.submissionClosesAt && submittingRound.submissionClosesAt < new Date()) {
-      throw new Error("The submission window has closed.");
+      throw new ORPCError("PRECONDITION_FAILED", { message: "The submission window has closed." });
     }
 
     const submissionId = nanoid();

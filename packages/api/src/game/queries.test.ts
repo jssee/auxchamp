@@ -128,6 +128,13 @@ test("returns null for a non-existent game", async () => {
   expect(detail).toBeNull();
 });
 
+test("returns null for a non-member", async () => {
+  const { gameId } = await setupActiveGame();
+  const outsider = await createTestUser("Outsider");
+  const detail = await getGameDetail(outsider.id, gameId);
+  expect(detail).toBeNull();
+});
+
 // -- test helpers ---------------------------------------------------------
 
 async function setupActiveGame() {

@@ -62,7 +62,11 @@ export const start_game = command(
 export const upsert_submission = command(
   v.object({
     gameId: v.string(),
-    spotifyTrackUrl: v.pipe(v.string(), v.url("Must be a valid URL")),
+    spotifyTrackUrl: v.pipe(
+      v.string(),
+      v.url("Must be a valid URL"),
+      v.startsWith("https://open.spotify.com/", "Must be a Spotify URL"),
+    ),
     note: v.optional(v.nullable(v.string())),
   }),
   async (input) => {
