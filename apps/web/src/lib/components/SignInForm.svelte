@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { signIn } from '$lib/app.remote';
-	import { signInSchema } from '$lib/auth-schemas';
+	import { signIn } from '$lib/auth/auth.remote';
+	import { signInSchema } from '$lib/auth/schema';
 	import * as v from 'valibot';
 
 	let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();

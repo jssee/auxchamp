@@ -1,7 +1,7 @@
 import { command, getRequestEvent } from "$app/server";
 
-import { signInSchema, signUpSchema } from "./auth-schemas";
-import { auth } from "./auth";
+import { signInSchema, signUpSchema } from "./schema";
+import { auth } from ".";
 
 export const signIn = command(signInSchema, async (credentials) => {
   try {

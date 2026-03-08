@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { authClient } from '$lib/auth-client';
+	import { authClient } from '$lib/auth/client';
 
 	const sessionQuery = authClient.useSession();
 
