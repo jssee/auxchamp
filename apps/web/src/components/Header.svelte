@@ -4,6 +4,7 @@
     const links = [
         { to: "/", label: "Home" },
         { to: "/dashboard", label: "Dashboard" },
+        { to: "/games/new", label: "New Game" },
     ];
 
 </script>

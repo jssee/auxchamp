@@ -1,5 +1,9 @@
+import { ORPCError } from "@orpc/server";
+import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
+import { db } from "@auxchamp/db";
+import { user } from "@auxchamp/db/schema/auth";
 import { protectedProcedure } from "../index";
 import {
   acceptInvite,
@@ -38,13 +42,26 @@ export const addRoundProcedure = protectedProcedure
 
 const invitePlayerSchema = v.object({
   gameId: v.string(),
-  targetUserId: v.string(),
+  targetUserEmail: v.pipe(v.string(), v.email()),
 });
 
 export const invitePlayerProcedure = protectedProcedure
   .input(invitePlayerSchema)
-  .handler(({ context, input }) => {
-    return invitePlayer(context.session.user.id, input);
+  .handler(async ({ context, input }) => {
+    const [targetUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, input.targetUserEmail))
+      .limit(1);
+
+    if (!targetUser) {
+      throw new ORPCError("NOT_FOUND", { message: "No user found with that email." });
+    }
+
+    return invitePlayer(context.session.user.id, {
+      gameId: input.gameId,
+      targetUserId: targetUser.id,
+    });
   });
 
 const acceptInviteSchema = v.object({
