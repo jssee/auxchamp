@@ -1,45 +1,64 @@
-import { command, getRequestEvent } from "$app/server";
+import { command, form, getRequestEvent } from "$app/server";
+import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
+import { isSpotifyTrackUrl } from "@auxchamp/api/utils";
 import { createApi } from "$lib/server/api";
+import { rethrowAsIssue } from "$lib/server/rethrow-as-issue";
 
-export const create_game = command(
+export const createGame = form(
   v.object({
     name: v.pipe(v.string(), v.minLength(1, "Name is required")),
-    description: v.optional(v.nullable(v.string())),
+    description: v.optional(v.string()),
     submissionWindowDays: v.pipe(v.number(), v.integer(), v.minValue(1)),
     votingWindowDays: v.pipe(v.number(), v.integer(), v.minValue(1)),
   }),
-  async (input) => {
+  async (input, issue) => {
     const api = createApi(getRequestEvent().request);
-    return api.game.create(input);
+
+    try {
+      const result = await api.game.create(input);
+      redirect(303, `/games/${result.gameId}`);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.name("Unable to create game."));
+    }
   },
 );
 
-export const add_round = command(
+export const addRound = form(
   v.object({
     gameId: v.string(),
     theme: v.pipe(v.string(), v.minLength(1, "Theme is required")),
-    description: v.optional(v.nullable(v.string())),
+    description: v.optional(v.string()),
   }),
-  async (input) => {
+  async (input, issue) => {
     const api = createApi(getRequestEvent().request);
-    return api.game.addRound(input);
+
+    try {
+      return await api.game.addRound(input);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.theme("Unable to add round."));
+    }
   },
 );
 
-export const invite_player = command(
+export const invitePlayer = form(
   v.object({
     gameId: v.string(),
     targetUserEmail: v.pipe(v.string(), v.email("Invalid email")),
   }),
-  async (input) => {
+  async (input, issue) => {
     const api = createApi(getRequestEvent().request);
-    return api.game.invitePlayer(input);
+
+    try {
+      return await api.game.invitePlayer(input);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.targetUserEmail("Unable to invite player."));
+    }
   },
 );
 
-export const accept_invite = command(
+export const acceptInvite = command(
   v.object({
     gameId: v.string(),
   }),
@@ -49,7 +68,7 @@ export const accept_invite = command(
   },
 );
 
-export const start_game = command(
+export const startGame = command(
   v.object({
     gameId: v.string(),
   }),
@@ -59,7 +78,7 @@ export const start_game = command(
   },
 );
 
-export const upsert_submission = command(
+export const upsertSubmission = form(
   v.object({
     gameId: v.string(),
     spotifyTrackUrl: v.pipe(
@@ -67,27 +86,15 @@ export const upsert_submission = command(
       v.url("Must be a valid URL"),
       v.check(isSpotifyTrackUrl, "Must be a Spotify track URL"),
     ),
-    note: v.optional(v.nullable(v.string())),
+    note: v.optional(v.string()),
   }),
-  async (input) => {
+  async (input, issue) => {
     const api = createApi(getRequestEvent().request);
-    return api.game.upsertSubmission(input);
+
+    try {
+      return await api.game.upsertSubmission(input);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.spotifyTrackUrl("Unable to submit this track right now."));
+    }
   },
 );
-
-function isSpotifyTrackUrl(input: string) {
-  try {
-    const url = new URL(input);
-    const pathSegments = url.pathname.split("/").filter(Boolean);
-
-    return (
-      url.protocol === "https:" &&
-      url.hostname === "open.spotify.com" &&
-      pathSegments[0] === "track" &&
-      typeof pathSegments[1] === "string" &&
-      pathSegments[1].length > 0
-    );
-  } catch {
-    return false;
-  }
-}
