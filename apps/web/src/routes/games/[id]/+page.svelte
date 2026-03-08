@@ -29,9 +29,10 @@
 	let roundTheme = $state('');
 	let roundDescription = $state('');
 	let inviteEmail = $state('');
-	// Intentionally capture initial values — user edits should not reset on data refresh
-	let trackUrl = $state(data.game.actorSubmission?.spotifyTrackUrl ?? '');
-	let trackNote = $state(data.game.actorSubmission?.note ?? '');
+	// Intentionally snapshot the initial submission once; user edits should survive invalidation.
+	const initialActorSubmission = (() => data.game.actorSubmission)();
+	let trackUrl = $state(initialActorSubmission?.spotifyTrackUrl ?? '');
+	let trackNote = $state(initialActorSubmission?.note ?? '');
 	let busy = $state('');
 	let error = $state('');
 

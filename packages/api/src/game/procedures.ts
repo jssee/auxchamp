@@ -89,10 +89,27 @@ const upsertSubmissionSchema = v.object({
   spotifyTrackUrl: v.pipe(
     v.string(),
     v.url(),
-    v.startsWith("https://open.spotify.com/", "Must be a Spotify URL"),
+    v.check(isSpotifyTrackUrl, "Must be a Spotify track URL"),
   ),
   note: v.optional(v.nullable(v.string())),
 });
+
+function isSpotifyTrackUrl(input: string) {
+  try {
+    const url = new URL(input);
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "open.spotify.com" &&
+      pathSegments[0] === "track" &&
+      typeof pathSegments[1] === "string" &&
+      pathSegments[1].length > 0
+    );
+  } catch {
+    return false;
+  }
+}
 
 export const upsertSubmissionProcedure = protectedProcedure
   .input(upsertSubmissionSchema)

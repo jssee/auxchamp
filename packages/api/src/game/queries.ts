@@ -1,7 +1,7 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
-import { game } from "@auxchamp/db/schema/game";
+import { game, submission } from "@auxchamp/db/schema/game";
 
 export async function getGameDetail(actorUserId: string, gameId: string) {
   const row = await db.query.game.findFirst({
@@ -29,17 +29,6 @@ export async function getGameDetail(actorUserId: string, gameId: string) {
           submissionClosesAt: true,
         },
         orderBy: (round) => [asc(round.number)],
-        with: {
-          submissions: {
-            columns: {
-              id: true,
-              playerId: true,
-              spotifyTrackUrl: true,
-              note: true,
-              submittedAt: true,
-            },
-          },
-        },
       },
     },
   });
@@ -48,13 +37,46 @@ export async function getGameDetail(actorUserId: string, gameId: string) {
 
   const actorPlayer = row.players.find((p) => p.userId === actorUserId) ?? null;
 
-  // Only game members can view game detail
+  // Only game members can view game detail.
   if (!actorPlayer) return null;
-  const activeRound = row.rounds.find((r) => r.phase === "submitting") ?? null;
+
+  const submissionCountByRoundId =
+    row.rounds.length === 0
+      ? new Map<string, number>()
+      : new Map(
+          (
+            await db
+              .select({
+                roundId: submission.roundId,
+                submissionCount: count(),
+              })
+              .from(submission)
+              .where(
+                inArray(
+                  submission.roundId,
+                  row.rounds.map((round) => round.id),
+                ),
+              )
+              .groupBy(submission.roundId)
+          ).map((entry) => [entry.roundId, entry.submissionCount]),
+        );
+
+  const activeRound = row.rounds.find((round) => round.phase === "submitting") ?? null;
   const actorSubmission =
-    activeRound && actorPlayer
-      ? (activeRound.submissions.find((s) => s.playerId === actorPlayer.id) ?? null)
-      : null;
+    activeRound === null
+      ? null
+      : await db.query.submission.findFirst({
+          where: and(
+            eq(submission.roundId, activeRound.id),
+            eq(submission.playerId, actorPlayer.id),
+          ),
+          columns: {
+            id: true,
+            spotifyTrackUrl: true,
+            note: true,
+            submittedAt: true,
+          },
+        });
 
   return {
     id: row.id,
@@ -67,24 +89,24 @@ export async function getGameDetail(actorUserId: string, gameId: string) {
     completedAt: row.completedAt,
     createdAt: row.createdAt,
 
-    players: row.players.map((p) => ({
-      id: p.id,
-      userId: p.userId,
-      userName: p.user.name,
-      userImage: p.user.image,
-      role: p.role,
-      status: p.status,
+    players: row.players.map((player) => ({
+      id: player.id,
+      userId: player.userId,
+      userName: player.user.name,
+      userImage: player.user.image,
+      role: player.role,
+      status: player.status,
     })),
 
-    rounds: row.rounds.map((r) => ({
-      id: r.id,
-      number: r.number,
-      theme: r.theme,
-      description: r.description,
-      phase: r.phase,
-      submissionOpensAt: r.submissionOpensAt,
-      submissionClosesAt: r.submissionClosesAt,
-      submissionCount: r.submissions.length,
+    rounds: row.rounds.map((round) => ({
+      id: round.id,
+      number: round.number,
+      theme: round.theme,
+      description: round.description,
+      phase: round.phase,
+      submissionOpensAt: round.submissionOpensAt,
+      submissionClosesAt: round.submissionClosesAt,
+      submissionCount: submissionCountByRoundId.get(round.id) ?? 0,
     })),
 
     activeRound: activeRound
@@ -99,13 +121,11 @@ export async function getGameDetail(actorUserId: string, gameId: string) {
         }
       : null,
 
-    actorPlayer: actorPlayer
-      ? {
-          id: actorPlayer.id,
-          role: actorPlayer.role,
-          status: actorPlayer.status,
-        }
-      : null,
+    actorPlayer: {
+      id: actorPlayer.id,
+      role: actorPlayer.role,
+      status: actorPlayer.status,
+    },
 
     actorSubmission: actorSubmission
       ? {

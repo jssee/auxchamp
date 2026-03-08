@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { ORPCError } from "@orpc/server";
 import dotenv from "dotenv";
 import { and, eq } from "drizzle-orm";
 
@@ -26,6 +27,23 @@ afterEach(async () => {
   }
   createdUserIds.clear();
 });
+
+async function expectOrpcError(
+  promise: Promise<unknown>,
+  expected: { code: string; status: number },
+) {
+  try {
+    await promise;
+    throw new Error(`Expected ORPCError ${expected.code}.`);
+  } catch (thrown) {
+    expect(thrown).toBeInstanceOf(ORPCError);
+
+    if (thrown instanceof ORPCError) {
+      expect(thrown.code).toBe(expected.code);
+      expect(thrown.status).toBe(expected.status);
+    }
+  }
+}
 
 test("createGame creates a draft game and creator participation", async () => {
   const actor = await createTestUser();
@@ -128,12 +146,13 @@ test("addRound rejects users who are not the draft creator", async () => {
 
   createdGameIds.add(draftGame.gameId);
 
-  await expect(
+  await expectOrpcError(
     addRound(intruder.id, {
       gameId: draftGame.gameId,
       theme: "Should not land",
     }),
-  ).rejects.toThrow("Only the creator can add rounds to a draft game.");
+    { code: "FORBIDDEN", status: 403 },
+  );
 
   const createdRounds = await db.query.round.findMany({
     where: eq(round.gameId, draftGame.gameId),
@@ -159,12 +178,13 @@ test("addRound rejects creator writes once the game is active", async () => {
     })
     .where(eq(game.id, draftGame.gameId));
 
-  await expect(
+  await expectOrpcError(
     addRound(creator.id, {
       gameId: draftGame.gameId,
       theme: "After the start",
     }),
-  ).rejects.toThrow("Only the creator can add rounds to a draft game.");
+    { code: "FORBIDDEN", status: 403 },
+  );
 
   const createdRounds = await db.query.round.findMany({
     where: eq(round.gameId, draftGame.gameId),
@@ -220,12 +240,13 @@ test("invitePlayer rejects non-creator", async () => {
 
   createdGameIds.add(draftGame.gameId);
 
-  await expect(
+  await expectOrpcError(
     invitePlayer(other.id, {
       gameId: draftGame.gameId,
       targetUserId: target.id,
     }),
-  ).rejects.toThrow("Only the creator can invite players to a draft game.");
+    { code: "FORBIDDEN", status: 403 },
+  );
 });
 
 test("invitePlayer rejects duplicate invite", async () => {
@@ -244,12 +265,13 @@ test("invitePlayer rejects duplicate invite", async () => {
     targetUserId: invitee.id,
   });
 
-  await expect(
+  await expectOrpcError(
     invitePlayer(creator.id, {
       gameId: draftGame.gameId,
       targetUserId: invitee.id,
     }),
-  ).rejects.toThrow("Player is already in this game.");
+    { code: "CONFLICT", status: 409 },
+  );
 });
 
 test("invitePlayer rejects invite to non-draft game", async () => {
@@ -265,12 +287,13 @@ test("invitePlayer rejects invite to non-draft game", async () => {
 
   await db.update(game).set({ state: "active" }).where(eq(game.id, draftGame.gameId));
 
-  await expect(
+  await expectOrpcError(
     invitePlayer(creator.id, {
       gameId: draftGame.gameId,
       targetUserId: invitee.id,
     }),
-  ).rejects.toThrow("Only the creator can invite players to a draft game.");
+    { code: "FORBIDDEN", status: 403 },
+  );
 });
 
 // -- acceptInvite ---------------------------------------------------------
@@ -320,9 +343,10 @@ test("acceptInvite rejects if no pending invite", async () => {
 
   createdGameIds.add(draftGame.gameId);
 
-  await expect(acceptInvite(stranger.id, { gameId: draftGame.gameId })).rejects.toThrow(
-    "No pending invite found.",
-  );
+  await expectOrpcError(acceptInvite(stranger.id, { gameId: draftGame.gameId }), {
+    code: "NOT_FOUND",
+    status: 404,
+  });
 });
 
 test("acceptInvite rejects if already active", async () => {
@@ -342,9 +366,10 @@ test("acceptInvite rejects if already active", async () => {
   });
   await acceptInvite(invitee.id, { gameId: draftGame.gameId });
 
-  await expect(acceptInvite(invitee.id, { gameId: draftGame.gameId })).rejects.toThrow(
-    "No pending invite found.",
-  );
+  await expectOrpcError(acceptInvite(invitee.id, { gameId: draftGame.gameId }), {
+    code: "NOT_FOUND",
+    status: 404,
+  });
 });
 
 // -- startGame ------------------------------------------------------------
@@ -371,25 +396,28 @@ test("startGame activates a valid draft and opens round 1", async () => {
 test("startGame rejects non-creator", async () => {
   const { gameId, players } = await setupLobby();
 
-  await expect(startGame(players[0]!.id, { gameId })).rejects.toThrow(
-    "Only the creator can start a draft game.",
-  );
+  await expectOrpcError(startGame(players[0]!.id, { gameId }), {
+    code: "FORBIDDEN",
+    status: 403,
+  });
 });
 
 test("startGame rejects game with no rounds", async () => {
   const { gameId, creator } = await setupLobby({ rounds: 0 });
 
-  await expect(startGame(creator.id, { gameId })).rejects.toThrow(
-    "Game must have at least one round.",
-  );
+  await expectOrpcError(startGame(creator.id, { gameId }), {
+    code: "PRECONDITION_FAILED",
+    status: 412,
+  });
 });
 
 test("startGame rejects game with fewer than four active players", async () => {
   const { gameId, creator } = await setupLobby({ playerCount: 2 });
 
-  await expect(startGame(creator.id, { gameId })).rejects.toThrow(
-    "Game must have at least four active players.",
-  );
+  await expectOrpcError(startGame(creator.id, { gameId }), {
+    code: "PRECONDITION_FAILED",
+    status: 412,
+  });
 });
 
 test("startGame rejects non-draft game", async () => {
@@ -397,9 +425,10 @@ test("startGame rejects non-draft game", async () => {
 
   await db.update(game).set({ state: "active" }).where(eq(game.id, gameId));
 
-  await expect(startGame(creator.id, { gameId })).rejects.toThrow(
-    "Only the creator can start a draft game.",
-  );
+  await expectOrpcError(startGame(creator.id, { gameId }), {
+    code: "FORBIDDEN",
+    status: 403,
+  });
 });
 
 // -- upsertSubmission -----------------------------------------------------
@@ -461,12 +490,13 @@ test("upsertSubmission rejects non-active player", async () => {
   const { gameId } = await setupActiveGame();
   const outsider = await createTestUser();
 
-  await expect(
+  await expectOrpcError(
     upsertSubmission(outsider.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/nope",
     }),
-  ).rejects.toThrow("Only active players can submit.");
+    { code: "FORBIDDEN", status: 403 },
+  );
 });
 
 test("upsertSubmission rejects when no round is accepting submissions", async () => {
@@ -478,12 +508,13 @@ test("upsertSubmission rejects when no round is accepting submissions", async ()
     .set({ phase: "voting" })
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
 
-  await expect(
+  await expectOrpcError(
     upsertSubmission(players[0]!.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/late",
     }),
-  ).rejects.toThrow("No round is currently accepting submissions.");
+    { code: "PRECONDITION_FAILED", status: 412 },
+  );
 });
 
 test("upsertSubmission rejects when submission window has closed", async () => {
@@ -495,12 +526,13 @@ test("upsertSubmission rejects when submission window has closed", async () => {
     .set({ submissionClosesAt: new Date("2020-01-01") })
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
 
-  await expect(
+  await expectOrpcError(
     upsertSubmission(players[0]!.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/expired",
     }),
-  ).rejects.toThrow("The submission window has closed.");
+    { code: "PRECONDITION_FAILED", status: 412 },
+  );
 });
 
 // -- test helpers ---------------------------------------------------------
