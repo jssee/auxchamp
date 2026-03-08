@@ -9,6 +9,7 @@ import {
   startGame,
   upsertSubmission,
 } from "./commands";
+import { getGameDetail } from "./queries";
 
 const createGameSchema = v.object({
   name: v.string(),
@@ -76,4 +77,14 @@ export const upsertSubmissionProcedure = protectedProcedure
   .input(upsertSubmissionSchema)
   .handler(({ context, input }) => {
     return upsertSubmission(context.session.user.id, input);
+  });
+
+const getGameDetailSchema = v.object({
+  gameId: v.string(),
+});
+
+export const getGameDetailProcedure = protectedProcedure
+  .input(getGameDetailSchema)
+  .handler(({ context, input }) => {
+    return getGameDetail(context.session.user.id, input.gameId);
   });

@@ -5,6 +5,7 @@ import {
   acceptInviteProcedure,
   addRoundProcedure,
   createGameProcedure,
+  getGameDetailProcedure,
   invitePlayerProcedure,
   startGameProcedure,
   upsertSubmissionProcedure,
@@ -19,6 +20,7 @@ export const appRouter = {
     acceptInvite: acceptInviteProcedure,
     start: startGameProcedure,
     upsertSubmission: upsertSubmissionProcedure,
+    detail: getGameDetailProcedure,
   },
 };
 export type AppRouter = typeof appRouter;
