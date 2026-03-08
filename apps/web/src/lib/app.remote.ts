@@ -1,22 +1,7 @@
-import { command, getRequestEvent, query } from "$app/server";
+import { command, getRequestEvent } from "$app/server";
 
-import { createApi } from "./server/api";
 import { signInSchema, signUpSchema } from "./auth-schemas";
 import { auth } from "./auth";
-
-export const healthCheck = query(async () => {
-  const api = createApi(getRequestEvent().request);
-  return api.healthCheck();
-});
-
-export const privateData = query(async () => {
-  const api = createApi(getRequestEvent().request);
-  try {
-    return await api.privateData();
-  } catch {
-    return null;
-  }
-});
 
 export const signIn = command(signInSchema, async (credentials) => {
   try {
