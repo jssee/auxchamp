@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import {
-		accept_invite,
-		add_round,
-		invite_player,
-		start_game,
-		upsert_submission,
-	} from '$lib/game.remote';
+	import { acceptInvite, startGame } from '$lib/game.remote';
+
+	import AddRoundForm from './AddRoundForm.svelte';
+	import InvitePlayerForm from './InvitePlayerForm.svelte';
+	import SubmissionForm from './SubmissionForm.svelte';
 
 	const { data } = $props();
 	let game = $derived(data.game);
@@ -24,62 +22,28 @@
 	let canSubmit = $derived(
 		game.actorPlayer?.status === 'active' && game.activeRound !== null,
 	);
-
-	// -- form state --
-	let roundTheme = $state('');
-	let roundDescription = $state('');
-	let inviteEmail = $state('');
-	// Intentionally snapshot the initial submission once; user edits should survive invalidation.
-	const initialActorSubmission = (() => data.game.actorSubmission)();
-	let trackUrl = $state(initialActorSubmission?.spotifyTrackUrl ?? '');
-	let trackNote = $state(initialActorSubmission?.note ?? '');
-	let busy = $state('');
 	let error = $state('');
 
-	async function run(key: string, fn: () => Promise<unknown>) {
-		busy = key;
+	async function handleAccept() {
 		error = '';
+
 		try {
-			await fn();
+			await acceptInvite({ gameId: game.id });
 			await invalidateAll();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Something went wrong.';
-		} finally {
-			busy = '';
 		}
 	}
 
-	function handleAddRound() {
-		run('addRound', async () => {
-			await add_round({ gameId: game.id, theme: roundTheme, description: roundDescription || null });
-			roundTheme = '';
-			roundDescription = '';
-		});
-	}
+	async function handleStart() {
+		error = '';
 
-	function handleInvite() {
-		run('invite', async () => {
-			await invite_player({ gameId: game.id, targetUserEmail: inviteEmail });
-			inviteEmail = '';
-		});
-	}
-
-	function handleAccept() {
-		run('accept', () => accept_invite({ gameId: game.id }));
-	}
-
-	function handleStart() {
-		run('start', () => start_game({ gameId: game.id }));
-	}
-
-	function handleSubmit() {
-		run('submit', () =>
-			upsert_submission({
-				gameId: game.id,
-				spotifyTrackUrl: trackUrl,
-				note: trackNote || null,
-			}),
-		);
+		try {
+			await startGame({ gameId: game.id });
+			await invalidateAll();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Something went wrong.';
+		}
 	}
 </script>
 
@@ -112,10 +76,10 @@
 			<p class="text-sm">You've been invited to this game.</p>
 			<button
 				class="border px-3 py-1 text-sm font-medium"
-				disabled={busy === 'accept'}
+				disabled={acceptInvite.pending > 0}
 				onclick={handleAccept}
 			>
-				{busy === 'accept' ? 'Accepting...' : 'Accept Invite'}
+				{acceptInvite.pending > 0 ? 'Accepting...' : 'Accept Invite'}
 			</button>
 		</div>
 	{/if}
@@ -138,18 +102,7 @@
 		</ul>
 
 		{#if isCreator && isDraft}
-			<form class="mt-3 flex gap-2" onsubmit={(e) => { e.preventDefault(); handleInvite(); }}>
-				<input
-					type="email"
-					placeholder="Invite by email"
-					class="flex-1 border px-3 py-1 text-sm"
-					required
-					bind:value={inviteEmail}
-				/>
-				<button type="submit" class="border px-3 py-1 text-sm" disabled={busy === 'invite'}>
-					{busy === 'invite' ? 'Inviting...' : 'Invite'}
-				</button>
-			</form>
+			<InvitePlayerForm gameId={game.id} />
 		{/if}
 	</section>
 
@@ -187,26 +140,7 @@
 		{/if}
 
 		{#if isCreator && isDraft}
-			<form class="mt-3 space-y-2" onsubmit={(e) => { e.preventDefault(); handleAddRound(); }}>
-				<div class="flex gap-2">
-					<input
-						type="text"
-						placeholder="Round theme"
-						class="flex-1 border px-3 py-1 text-sm"
-						required
-						bind:value={roundTheme}
-					/>
-					<button type="submit" class="border px-3 py-1 text-sm" disabled={busy === 'addRound'}>
-						{busy === 'addRound' ? 'Adding...' : 'Add Round'}
-					</button>
-				</div>
-				<input
-					type="text"
-					placeholder="Description (optional)"
-					class="w-full border px-3 py-1 text-sm"
-					bind:value={roundDescription}
-				/>
-			</form>
+			<AddRoundForm gameId={game.id} />
 		{/if}
 	</section>
 
@@ -215,10 +149,10 @@
 		<section>
 			<button
 				class="w-full border px-4 py-2 font-medium disabled:opacity-50"
-				disabled={!canStart || busy === 'start'}
+				disabled={!canStart || startGame.pending > 0}
 				onclick={handleStart}
 			>
-				{busy === 'start' ? 'Starting...' : 'Start Game'}
+				{startGame.pending > 0 ? 'Starting...' : 'Start Game'}
 			</button>
 			{#if !canStart}
 				<p class="mt-1 text-xs text-neutral-400">
@@ -239,33 +173,15 @@
 					Window closes {new Date(game.activeRound.submissionClosesAt).toLocaleDateString()}
 				</p>
 			{/if}
-			<form class="space-y-2" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-				<input
-					type="url"
-					placeholder="Spotify track URL"
-					class="w-full border px-3 py-2 text-sm"
-					required
-					bind:value={trackUrl}
-				/>
-				<input
-					type="text"
-					placeholder="Note (optional)"
-					class="w-full border px-3 py-2 text-sm"
-					bind:value={trackNote}
-				/>
-				<button type="submit" class="w-full border px-4 py-2 text-sm font-medium" disabled={busy === 'submit'}>
-					{#if busy === 'submit'}
-						Submitting...
-					{:else if game.actorSubmission}
-						Update Submission
-					{:else}
-						Submit
-					{/if}
-				</button>
-			</form>
+			<SubmissionForm
+				gameId={game.id}
+				initialTrackUrl={game.actorSubmission?.spotifyTrackUrl ?? ''}
+				initialNote={game.actorSubmission?.note ?? ''}
+				hasExisting={!!game.actorSubmission}
+			/>
 			{#if game.actorSubmission}
 				<p class="mt-2 text-xs text-green-600">
-					✓ You submitted: {game.actorSubmission.spotifyTrackUrl}
+					&#10003; You submitted: {game.actorSubmission.spotifyTrackUrl}
 				</p>
 			{/if}
 		</section>
