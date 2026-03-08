@@ -13,6 +13,7 @@ import {
   startGame,
   upsertSubmission,
 } from "./commands";
+import { isSpotifyTrackUrl } from "../utils";
 import { getGameDetail } from "./queries";
 
 const createGameSchema = v.object({
@@ -93,23 +94,6 @@ const upsertSubmissionSchema = v.object({
   ),
   note: v.optional(v.nullable(v.string())),
 });
-
-function isSpotifyTrackUrl(input: string) {
-  try {
-    const url = new URL(input);
-    const pathSegments = url.pathname.split("/").filter(Boolean);
-
-    return (
-      url.protocol === "https:" &&
-      url.hostname === "open.spotify.com" &&
-      pathSegments[0] === "track" &&
-      typeof pathSegments[1] === "string" &&
-      pathSegments[1].length > 0
-    );
-  } catch {
-    return false;
-  }
-}
 
 export const upsertSubmissionProcedure = protectedProcedure
   .input(upsertSubmissionSchema)

@@ -7,6 +7,9 @@
     },
     "./routers": {
       "default": "./src/routers/index.ts"
+    },
+    "./utils": {
+      "default": "./src/utils.ts"
     }
   },
   "scripts": {
