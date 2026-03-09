@@ -52,10 +52,10 @@ Remote functions use the same client:
 ```typescript
 // feature.remote.ts
 import { command, getRequestEvent } from "$app/server";
+import { createGameInputSchema } from "@auxchamp/api/schema";
 import { createApi } from "$lib/server/api";
-import { createGameSchema } from "./schemas";
 
-export const create_game = command(createGameSchema, async (input) => {
+export const create_game = command(createGameInputSchema, async (input) => {
   const api = createApi(getRequestEvent().request);
   return api.createGame(input);
 });
@@ -123,7 +123,7 @@ procedure.
 | Domain logic             | API procedures  | Commands, queries, invariants              |
 | Authorization            | API middleware  | `protectedProcedure`                       |
 | Input validation         | API procedures  | Procedure-level schemas                    |
-| Form UX validation       | Remote function | `command(schema, ...)` for client feedback |
+| Form UX validation       | Remote function | `command(schema, ...)` for client feedback, often reusing `@auxchamp/api/schema` |
 | Database access          | API             | Drizzle queries, transactions              |
 | Session/context          | API context     | `createContext()` from request headers     |
 | Error translation        | Remote function | Map oRPC errors to frontend results        |
