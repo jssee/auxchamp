@@ -1,5 +1,5 @@
 import { createContext } from "@auxchamp/api/context";
-import { appRouter } from "@auxchamp/api/routers";
+import { appRouter } from "@auxchamp/api/router";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";

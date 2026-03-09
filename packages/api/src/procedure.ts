@@ -1,15 +1,15 @@
-import { ORPCError, os } from "@orpc/server";
+import { ORPCError, implement } from "@orpc/server";
 
+import { contract } from "./contract";
 import type { Context } from "./context";
 
-export const o = os.$context<Context>();
+export const publicProcedure = implement(contract).$context<Context>();
 
-export const publicProcedure = o;
-
-const requireAuth = o.middleware(async ({ context, next }) => {
+const requireAuth = publicProcedure.middleware(async ({ context, next }) => {
   if (!context.session?.user) {
     throw new ORPCError("UNAUTHORIZED");
   }
+
   return next({
     context: {
       session: context.session,

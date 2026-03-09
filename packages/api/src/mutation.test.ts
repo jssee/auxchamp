@@ -4,14 +4,14 @@ import dotenv from "dotenv";
 import { and, eq } from "drizzle-orm";
 
 dotenv.config({
-  path: new URL("../../../../apps/web/.env", import.meta.url).pathname,
+  path: new URL("../../../apps/web/.env", import.meta.url).pathname,
 });
 
 const { db } = await import("@auxchamp/db");
 const { game, player, round, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
 const { acceptInvite, addRound, createGame, invitePlayer, startGame, upsertSubmission } =
-  await import("./commands");
+  await import("./mutation");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();

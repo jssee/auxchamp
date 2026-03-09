@@ -2,7 +2,7 @@ import { command, form, getRequestEvent } from "$app/server";
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { isSpotifyTrackUrl } from "@auxchamp/api/utils";
+import { isSpotifyTrackUrl } from "@auxchamp/api/util";
 import { createApi } from "$lib/server/api";
 import { rethrowAsIssue } from "$lib/server/rethrow-as-issue";
 
@@ -17,7 +17,7 @@ export const createGame = form(
     const api = createApi(getRequestEvent().request);
 
     try {
-      const result = await api.game.create(input);
+      const result = await api.createGame(input);
       redirect(303, `/games/${result.gameId}`);
     } catch (thrown) {
       rethrowAsIssue(thrown, issue.name("Unable to create game."));
@@ -35,7 +35,7 @@ export const addRound = form(
     const api = createApi(getRequestEvent().request);
 
     try {
-      return await api.game.addRound(input);
+      return await api.addRound(input);
     } catch (thrown) {
       rethrowAsIssue(thrown, issue.theme("Unable to add round."));
     }
@@ -51,7 +51,7 @@ export const invitePlayer = form(
     const api = createApi(getRequestEvent().request);
 
     try {
-      return await api.game.invitePlayer(input);
+      return await api.invitePlayer(input);
     } catch (thrown) {
       rethrowAsIssue(thrown, issue.targetUserEmail("Unable to invite player."));
     }
@@ -64,7 +64,7 @@ export const acceptInvite = command(
   }),
   async (input) => {
     const api = createApi(getRequestEvent().request);
-    return api.game.acceptInvite(input);
+    return api.acceptInvite(input);
   },
 );
 
@@ -74,7 +74,7 @@ export const startGame = command(
   }),
   async (input) => {
     const api = createApi(getRequestEvent().request);
-    return api.game.start(input);
+    return api.startGame(input);
   },
 );
 
@@ -92,7 +92,7 @@ export const upsertSubmission = form(
     const api = createApi(getRequestEvent().request);
 
     try {
-      return await api.game.upsertSubmission(input);
+      return await api.upsertSubmission(input);
     } catch (thrown) {
       rethrowAsIssue(thrown, issue.spotifyTrackUrl("Unable to submit this track right now."));
     }

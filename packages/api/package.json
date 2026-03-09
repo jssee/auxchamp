@@ -5,11 +5,11 @@
     "./context": {
       "default": "./src/context.ts"
     },
-    "./routers": {
-      "default": "./src/routers/index.ts"
+    "./router": {
+      "default": "./src/router.ts"
     },
-    "./utils": {
-      "default": "./src/utils.ts"
+    "./util": {
+      "default": "./src/util.ts"
     }
   },
   "scripts": {
@@ -18,16 +18,15 @@
   "dependencies": {
     "@auxchamp/auth": "workspace:*",
     "@auxchamp/db": "workspace:*",
-    "@auxchamp/env": "workspace:*",
     "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
+    "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
-    "dotenv": "catalog:",
     "nanoid": "^3.3.11",
     "valibot": "catalog:"
   },
   "devDependencies": {
     "@auxchamp/config": "workspace:*",
+    "dotenv": "catalog:",
     "typescript": "catalog:"
   }
 }

@@ -4,14 +4,14 @@ import dotenv from "dotenv";
 import { and, eq } from "drizzle-orm";
 
 dotenv.config({
-  path: new URL("../../../../apps/web/.env", import.meta.url).pathname,
+  path: new URL("../../../apps/web/.env", import.meta.url).pathname,
 });
 
-const { appRouter } = await import("../routers");
+const { appRouter } = await import("./router");
 const { db } = await import("@auxchamp/db");
 const { game, player, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame } = await import("./commands");
+const { acceptInvite, addRound, createGame, invitePlayer, startGame } = await import("./mutation");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -28,7 +28,7 @@ afterEach(async () => {
   createdUserIds.clear();
 });
 
-test("upsertSubmission rejects non-track Spotify URLs at the procedure boundary", async () => {
+test("top-level upsertSubmission rejects non-track Spotify URLs at the procedure boundary", async () => {
   const { gameId, submitter } = await setupActiveGame();
   const api = createRouterClient(appRouter, {
     context: () =>
@@ -42,7 +42,7 @@ test("upsertSubmission rejects non-track Spotify URLs at the procedure boundary"
   });
 
   await expect(
-    api.game.upsertSubmission({
+    api.upsertSubmission({
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/album/abc123",
     }),
