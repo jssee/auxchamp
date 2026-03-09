@@ -118,18 +118,18 @@ procedure.
 
 ## Decision record
 
-| Concern                  | Owner           | Notes                                      |
-| ------------------------ | --------------- | ------------------------------------------ |
-| Domain logic             | API procedures  | Commands, queries, invariants              |
-| Authorization            | API middleware  | `protectedProcedure`                       |
-| Input validation         | API procedures  | Procedure-level schemas                    |
+| Concern                  | Owner           | Notes                                                                            |
+| ------------------------ | --------------- | -------------------------------------------------------------------------------- |
+| Domain logic             | API procedures  | Commands, queries, invariants                                                    |
+| Authorization            | API middleware  | `protectedProcedure`                                                             |
+| Input validation         | API procedures  | Procedure-level schemas                                                          |
 | Form UX validation       | Remote function | `command(schema, ...)` for client feedback, often reusing `@auxchamp/api/schema` |
-| Database access          | API             | Drizzle queries, transactions              |
-| Session/context          | API context     | `createContext()` from request headers     |
-| Error translation        | Remote function | Map oRPC errors to frontend results        |
-| Initial page data        | Load function   | `+page.server.ts` via server-side client   |
-| User-initiated mutations | Remote function | `command()` via server-side client         |
-| User-initiated fetches   | Remote function | `query()` via server-side client           |
+| Database access          | API             | Drizzle queries, transactions                                                    |
+| Session/context          | API context     | `createContext()` from request headers                                           |
+| Error translation        | Remote function | Map oRPC errors to frontend results                                              |
+| Initial page data        | Load function   | `+page.server.ts` via server-side client                                         |
+| User-initiated mutations | Remote function | `command()` via server-side client                                               |
+| User-initiated fetches   | Remote function | `query()` via server-side client                                                 |
 
 ## Exception: auth transport
 
