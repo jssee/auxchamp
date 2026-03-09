@@ -78,7 +78,7 @@ export const startGame = command(
   },
 );
 
-export const upsertSubmission = form(
+export const saveSubmission = form(
   v.object({
     gameId: v.string(),
     spotifyTrackUrl: v.pipe(
@@ -92,7 +92,7 @@ export const upsertSubmission = form(
     const api = createApi(getRequestEvent().request);
 
     try {
-      return await api.upsertSubmission(input);
+      return await api.saveSubmission(input);
     } catch (thrown) {
       rethrowAsIssue(thrown, issue.spotifyTrackUrl("Unable to submit this track right now."));
     }

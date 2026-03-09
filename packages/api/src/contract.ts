@@ -63,7 +63,7 @@ const startGameOutputSchema = v.object({
   openRoundId: v.string(),
 });
 
-const upsertSubmissionInputSchema = v.object({
+const saveSubmissionInputSchema = v.object({
   gameId: v.string(),
   spotifyTrackUrl: v.pipe(
     v.string(),
@@ -73,7 +73,7 @@ const upsertSubmissionInputSchema = v.object({
   note: v.optional(v.nullable(v.string())),
 });
 
-const upsertSubmissionOutputSchema = v.object({
+const saveSubmissionOutputSchema = v.object({
   submissionId: v.string(),
   playerId: v.string(),
   roundId: v.string(),
@@ -125,11 +125,11 @@ const actorSubmissionSchema = v.object({
   submittedAt: v.date(),
 });
 
-const getGameDetailInputSchema = v.object({
+const getGameInputSchema = v.object({
   gameId: v.string(),
 });
 
-const getGameDetailOutputSchema = v.nullable(
+const getGameOutputSchema = v.nullable(
   v.object({
     id: v.string(),
     name: v.string(),
@@ -149,12 +149,12 @@ const getGameDetailOutputSchema = v.nullable(
 );
 
 export const contract = {
-  healthCheck: oc.output(v.literal("OK")),
+  health: oc.output(v.literal("OK")),
   createGame: oc.input(createGameInputSchema).output(createGameOutputSchema),
   addRound: oc.input(addRoundInputSchema).output(addRoundOutputSchema),
   invitePlayer: oc.input(invitePlayerInputSchema).output(invitePlayerOutputSchema),
   acceptInvite: oc.input(acceptInviteInputSchema).output(acceptInviteOutputSchema),
   startGame: oc.input(startGameInputSchema).output(startGameOutputSchema),
-  upsertSubmission: oc.input(upsertSubmissionInputSchema).output(upsertSubmissionOutputSchema),
-  getGameDetail: oc.input(getGameDetailInputSchema).output(getGameDetailOutputSchema),
+  saveSubmission: oc.input(saveSubmissionInputSchema).output(saveSubmissionOutputSchema),
+  getGame: oc.input(getGameInputSchema).output(getGameOutputSchema),
 };

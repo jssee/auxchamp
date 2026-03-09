@@ -7,7 +7,7 @@ export const load = async ({ params, request }) => {
   const api = createApi(request);
 
   try {
-    const game = await api.getGameDetail({ gameId: params.id });
+    const game = await api.getGame({ gameId: params.id });
 
     if (!game) {
       error(404, "Game not found");

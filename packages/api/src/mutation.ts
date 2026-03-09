@@ -31,7 +31,7 @@ export type StartGameInput = {
   gameId: string;
 };
 
-export type UpsertSubmissionInput = {
+export type SaveSubmissionInput = {
   gameId: string;
   spotifyTrackUrl: string;
   note?: string | null;
@@ -254,7 +254,7 @@ export async function startGame(actorUserId: string, input: StartGameInput) {
   });
 }
 
-export async function upsertSubmission(actorUserId: string, input: UpsertSubmissionInput) {
+export async function saveSubmission(actorUserId: string, input: SaveSubmissionInput) {
   return db.transaction(async (tx) => {
     const [activePlayer] = await tx
       .select({ id: player.id })

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { upsertSubmission } from '$lib/game.remote';
+	import { saveSubmission } from '$lib/game.remote';
 
 	const {
 		gameId,
@@ -14,12 +14,12 @@
 	} = $props();
 
 	// Intentionally capture initial values once so user edits survive invalidation.
-	upsertSubmission.fields.spotifyTrackUrl.set(initialTrackUrl);
-	upsertSubmission.fields.note.set(initialNote);
+	saveSubmission.fields.spotifyTrackUrl.set(initialTrackUrl);
+	saveSubmission.fields.note.set(initialNote);
 </script>
 
-<form class="space-y-2" {...upsertSubmission}>
-	<input {...upsertSubmission.fields.gameId.as('hidden', gameId)} />
+<form class="space-y-2" {...saveSubmission}>
+	<input {...saveSubmission.fields.gameId.as('hidden', gameId)} />
 	<div class="flex flex-col gap-1">
 		<label class="text-sm" for="spotify-track-url">Spotify track URL</label>
 		<input
@@ -27,9 +27,9 @@
 			placeholder="Spotify track URL"
 			class="w-full border px-3 py-2 text-sm"
 			required
-			{...upsertSubmission.fields.spotifyTrackUrl.as('text')}
+			{...saveSubmission.fields.spotifyTrackUrl.as('text')}
 		/>
-		{#each upsertSubmission.fields.spotifyTrackUrl.issues() as issue}
+		{#each saveSubmission.fields.spotifyTrackUrl.issues() as issue}
 			<p class="text-xs text-red-500">{issue.message}</p>
 		{/each}
 	</div>
@@ -39,15 +39,15 @@
 			id="spotify-track-note"
 			class="w-full border px-3 py-2 text-sm"
 			rows="2"
-			{...upsertSubmission.fields.note.as('text')}
+			{...saveSubmission.fields.note.as('text')}
 		></textarea>
 	</div>
 	<button
 		type="submit"
 		class="w-full border px-4 py-2 text-sm font-medium"
-		disabled={upsertSubmission.pending > 0}
+		disabled={saveSubmission.pending > 0}
 	>
-		{#if upsertSubmission.pending > 0}
+		{#if saveSubmission.pending > 0}
 			Submitting...
 		{:else if hasExisting}
 			Update Submission

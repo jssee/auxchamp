@@ -10,7 +10,7 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game, player, round, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame, upsertSubmission } =
+const { acceptInvite, addRound, createGame, invitePlayer, startGame, saveSubmission } =
   await import("./mutation");
 
 const createdGameIds = new Set<string>();
@@ -431,12 +431,12 @@ test("startGame rejects non-draft game", async () => {
   });
 });
 
-// -- upsertSubmission -----------------------------------------------------
+// -- saveSubmission -----------------------------------------------------
 
-test("upsertSubmission creates a submission for the active round", async () => {
+test("saveSubmission creates a submission for the active round", async () => {
   const { gameId, players } = await setupActiveGame();
 
-  const result = await upsertSubmission(players[0]!.id, {
+  const result = await saveSubmission(players[0]!.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/abc123",
     note: "Great opener",
@@ -459,15 +459,15 @@ test("upsertSubmission creates a submission for the active round", async () => {
   });
 });
 
-test("upsertSubmission updates an existing submission", async () => {
+test("saveSubmission updates an existing submission", async () => {
   const { gameId, players } = await setupActiveGame();
 
-  await upsertSubmission(players[0]!.id, {
+  await saveSubmission(players[0]!.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/first",
   });
 
-  const result = await upsertSubmission(players[0]!.id, {
+  const result = await saveSubmission(players[0]!.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/revised",
     note: "Changed my mind",
@@ -486,12 +486,12 @@ test("upsertSubmission updates an existing submission", async () => {
   expect(playerSubmissions).toHaveLength(1);
 });
 
-test("upsertSubmission rejects non-active player", async () => {
+test("saveSubmission rejects non-active player", async () => {
   const { gameId } = await setupActiveGame();
   const outsider = await createTestUser();
 
   await expectOrpcError(
-    upsertSubmission(outsider.id, {
+    saveSubmission(outsider.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/nope",
     }),
@@ -499,7 +499,7 @@ test("upsertSubmission rejects non-active player", async () => {
   );
 });
 
-test("upsertSubmission rejects when no round is accepting submissions", async () => {
+test("saveSubmission rejects when no round is accepting submissions", async () => {
   const { gameId, players } = await setupActiveGame();
 
   // Close the submission round
@@ -509,7 +509,7 @@ test("upsertSubmission rejects when no round is accepting submissions", async ()
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
 
   await expectOrpcError(
-    upsertSubmission(players[0]!.id, {
+    saveSubmission(players[0]!.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/late",
     }),
@@ -517,7 +517,7 @@ test("upsertSubmission rejects when no round is accepting submissions", async ()
   );
 });
 
-test("upsertSubmission rejects when submission window has closed", async () => {
+test("saveSubmission rejects when submission window has closed", async () => {
   const { gameId, players } = await setupActiveGame();
 
   // Set submissionClosesAt to the past
@@ -527,7 +527,7 @@ test("upsertSubmission rejects when submission window has closed", async () => {
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
 
   await expectOrpcError(
-    upsertSubmission(players[0]!.id, {
+    saveSubmission(players[0]!.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/expired",
     }),

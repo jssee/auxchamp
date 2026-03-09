@@ -28,7 +28,7 @@ afterEach(async () => {
   createdUserIds.clear();
 });
 
-test("top-level upsertSubmission rejects non-track Spotify URLs at the procedure boundary", async () => {
+test("top-level saveSubmission rejects non-track Spotify URLs at the procedure boundary", async () => {
   const { gameId, submitter } = await setupActiveGame();
   const api = createRouterClient(appRouter, {
     context: () =>
@@ -42,7 +42,7 @@ test("top-level upsertSubmission rejects non-track Spotify URLs at the procedure
   });
 
   await expect(
-    api.upsertSubmission({
+    api.saveSubmission({
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/album/abc123",
     }),

@@ -9,13 +9,13 @@ import {
   createGame,
   invitePlayer,
   startGame,
-  upsertSubmission,
+  saveSubmission,
 } from "./mutation";
 import { protectedProcedure, publicProcedure } from "./procedure";
-import { getGameDetail } from "./query";
+import { getGame } from "./query";
 
 export const appRouter = publicProcedure.router({
-  healthCheck: publicProcedure.healthCheck.handler(() => "OK"),
+  health: publicProcedure.health.handler(() => "OK"),
   createGame: protectedProcedure.createGame.handler(({ context, input }) => {
     return createGame(context.session.user.id, input);
   }),
@@ -44,11 +44,11 @@ export const appRouter = publicProcedure.router({
   startGame: protectedProcedure.startGame.handler(({ context, input }) => {
     return startGame(context.session.user.id, input);
   }),
-  upsertSubmission: protectedProcedure.upsertSubmission.handler(({ context, input }) => {
-    return upsertSubmission(context.session.user.id, input);
+  saveSubmission: protectedProcedure.saveSubmission.handler(({ context, input }) => {
+    return saveSubmission(context.session.user.id, input);
   }),
-  getGameDetail: protectedProcedure.getGameDetail.handler(({ context, input }) => {
-    return getGameDetail(context.session.user.id, input.gameId);
+  getGame: protectedProcedure.getGame.handler(({ context, input }) => {
+    return getGame(context.session.user.id, input.gameId);
   }),
 });
 

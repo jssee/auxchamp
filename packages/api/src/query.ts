@@ -3,7 +3,7 @@ import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { db } from "@auxchamp/db";
 import { game, submission } from "@auxchamp/db/schema/game";
 
-export async function getGameDetail(actorUserId: string, gameId: string) {
+export async function getGame(actorUserId: string, gameId: string) {
   const row = await db.query.game.findFirst({
     where: eq(game.id, gameId),
     with: {

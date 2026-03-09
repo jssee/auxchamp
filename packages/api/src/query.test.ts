@@ -9,9 +9,9 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame, upsertSubmission } =
+const { acceptInvite, addRound, createGame, invitePlayer, startGame, saveSubmission } =
   await import("./mutation");
-const { getGameDetail } = await import("./query");
+const { getGame } = await import("./query");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -45,7 +45,7 @@ test("returns game metadata, players, and rounds for a draft game", async () => 
   await invitePlayer(creator.id, { gameId: draftGame.gameId, targetUserId: invitee.id });
   await acceptInvite(invitee.id, { gameId: draftGame.gameId });
 
-  const detail = await getGameDetail(creator.id, draftGame.gameId);
+  const detail = await getGame(creator.id, draftGame.gameId);
 
   expect(detail).toMatchObject({
     id: draftGame.gameId,
@@ -82,13 +82,13 @@ test("returns game metadata, players, and rounds for a draft game", async () => 
 test("returns activeRound and actorSubmission for an active game", async () => {
   const { gameId, players } = await setupActiveGame();
 
-  await upsertSubmission(players[0]!.id, {
+  await saveSubmission(players[0]!.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/abc",
     note: "My pick",
   });
 
-  const detail = await getGameDetail(players[0]!.id, gameId);
+  const detail = await getGame(players[0]!.id, gameId);
 
   expect(detail!.activeRound).toMatchObject({
     number: 1,
@@ -106,7 +106,7 @@ test("returns activeRound and actorSubmission for an active game", async () => {
 test("returns null actorSubmission when the actor has not submitted", async () => {
   const { gameId, players } = await setupActiveGame();
 
-  const detail = await getGameDetail(players[0]!.id, gameId);
+  const detail = await getGame(players[0]!.id, gameId);
 
   expect(detail!.activeRound).not.toBeNull();
   expect(detail!.actorSubmission).toBeNull();
@@ -115,23 +115,23 @@ test("returns null actorSubmission when the actor has not submitted", async () =
 test("returns actorPlayer reflecting the actor's participation", async () => {
   const { gameId, creator, players } = await setupActiveGame();
 
-  const creatorDetail = await getGameDetail(creator.id, gameId);
+  const creatorDetail = await getGame(creator.id, gameId);
   expect(creatorDetail!.actorPlayer).toMatchObject({ role: "creator", status: "active" });
 
-  const playerDetail = await getGameDetail(players[1]!.id, gameId);
+  const playerDetail = await getGame(players[1]!.id, gameId);
   expect(playerDetail!.actorPlayer).toMatchObject({ role: "player", status: "active" });
 });
 
 test("returns null for a non-existent game", async () => {
   const actor = await createTestUser("Ghost");
-  const detail = await getGameDetail(actor.id, "nonexistent");
+  const detail = await getGame(actor.id, "nonexistent");
   expect(detail).toBeNull();
 });
 
 test("returns null for a non-member", async () => {
   const { gameId } = await setupActiveGame();
   const outsider = await createTestUser("Outsider");
-  const detail = await getGameDetail(outsider.id, gameId);
+  const detail = await getGame(outsider.id, gameId);
   expect(detail).toBeNull();
 });
 
