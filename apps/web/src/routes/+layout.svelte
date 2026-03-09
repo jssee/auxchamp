@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { ModeWatcher } from 'mode-watcher';
+    import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
 
 	import Header from '$lib/components/Header.svelte';
 	import '../app.css';
+
+    injectSpeedInsights();
 
 	const { children } = $props();
 </script>

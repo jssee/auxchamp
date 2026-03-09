@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@auxchamp/env": "workspace:*",
+    "@vercel/speed-insights": "^1.3.1",
     "dotenv": "catalog:"
   },
   "devDependencies": {
