@@ -4,40 +4,33 @@ import { and, asc, count, desc, eq } from "drizzle-orm";
 import { db } from "@auxchamp/db";
 import { game, player, round, submission } from "@auxchamp/db/schema/game";
 import { nanoid } from "nanoid";
+import type {
+  AcceptInviteInput,
+  AcceptInviteOutput,
+  AddRoundInput,
+  AddRoundOutput,
+  CreateGameInput,
+  CreateGameOutput,
+  InvitePlayerOutput,
+  SaveSubmissionInput,
+  SaveSubmissionOutput,
+  StartGameInput,
+  StartGameOutput,
+} from "./schema";
 
-export type CreateGameInput = {
-  name: string;
-  description?: string | null;
-  submissionWindowDays: number;
-  votingWindowDays: number;
-};
-
-export type AddRoundInput = {
-  gameId: string;
-  theme: string;
-  description?: string | null;
-};
-
+/**
+ * Internal after the router resolves the invitee's email to a concrete user id.
+ * This is domain input, not a public API payload.
+ */
 export type InvitePlayerInput = {
   gameId: string;
   targetUserId: string;
 };
 
-export type AcceptInviteInput = {
-  gameId: string;
-};
-
-export type StartGameInput = {
-  gameId: string;
-};
-
-export type SaveSubmissionInput = {
-  gameId: string;
-  spotifyTrackUrl: string;
-  note?: string | null;
-};
-
-export async function createGame(actorUserId: string, input: CreateGameInput) {
+export async function createGame(
+  actorUserId: string,
+  input: CreateGameInput,
+): Promise<CreateGameOutput> {
   return db.transaction(async (tx) => {
     const gameId = nanoid();
     const creatorPlayerId = nanoid();
@@ -65,7 +58,7 @@ export async function createGame(actorUserId: string, input: CreateGameInput) {
   });
 }
 
-export async function addRound(actorUserId: string, input: AddRoundInput) {
+export async function addRound(actorUserId: string, input: AddRoundInput): Promise<AddRoundOutput> {
   return db.transaction(async (tx) => {
     const [draftGame] = await tx
       .select({ state: game.state })
@@ -112,7 +105,10 @@ export async function addRound(actorUserId: string, input: AddRoundInput) {
   });
 }
 
-export async function invitePlayer(actorUserId: string, input: InvitePlayerInput) {
+export async function invitePlayer(
+  actorUserId: string,
+  input: InvitePlayerInput,
+): Promise<InvitePlayerOutput> {
   return db.transaction(async (tx) => {
     const [draftGame] = await tx
       .select({ state: game.state })
@@ -155,12 +151,15 @@ export async function invitePlayer(actorUserId: string, input: InvitePlayerInput
       playerId,
       gameId: input.gameId,
       userId: input.targetUserId,
-      status: "invited" as const,
+      status: "invited",
     };
   });
 }
 
-export async function acceptInvite(actorUserId: string, input: AcceptInviteInput) {
+export async function acceptInvite(
+  actorUserId: string,
+  input: AcceptInviteInput,
+): Promise<AcceptInviteOutput> {
   return db.transaction(async (tx) => {
     const [invitedPlayer] = await tx
       .select({ id: player.id, status: player.status })
@@ -183,12 +182,15 @@ export async function acceptInvite(actorUserId: string, input: AcceptInviteInput
       playerId: invitedPlayer.id,
       gameId: input.gameId,
       userId: actorUserId,
-      status: "active" as const,
+      status: "active",
     };
   });
 }
 
-export async function startGame(actorUserId: string, input: StartGameInput) {
+export async function startGame(
+  actorUserId: string,
+  input: StartGameInput,
+): Promise<StartGameOutput> {
   return db.transaction(async (tx) => {
     const [draftGame] = await tx
       .select({
@@ -247,14 +249,17 @@ export async function startGame(actorUserId: string, input: StartGameInput) {
 
     return {
       gameId: input.gameId,
-      state: "active" as const,
+      state: "active",
       startedAt: now,
       openRoundId: firstRound.id,
     };
   });
 }
 
-export async function saveSubmission(actorUserId: string, input: SaveSubmissionInput) {
+export async function saveSubmission(
+  actorUserId: string,
+  input: SaveSubmissionInput,
+): Promise<SaveSubmissionOutput> {
   return db.transaction(async (tx) => {
     const [activePlayer] = await tx
       .select({ id: player.id })
@@ -294,7 +299,7 @@ export async function saveSubmission(actorUserId: string, input: SaveSubmissionI
     const submissionId = nanoid();
     const now = new Date();
 
-    const [upserted] = await tx
+    const [saved] = await tx
       .insert(submission)
       .values({
         id: submissionId,
@@ -315,12 +320,12 @@ export async function saveSubmission(actorUserId: string, input: SaveSubmissionI
       .returning();
 
     return {
-      submissionId: upserted!.id,
+      submissionId: saved!.id,
       playerId: activePlayer.id,
       roundId: submittingRound.id,
       gameId: input.gameId,
-      spotifyTrackUrl: upserted!.spotifyTrackUrl,
-      note: upserted!.note,
+      spotifyTrackUrl: saved!.spotifyTrackUrl,
+      note: saved!.note,
     };
   });
 }
