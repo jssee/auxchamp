@@ -28,7 +28,7 @@ an external request.
 ```typescript
 // apps/web/src/lib/server/api.ts
 import { createRouterClient } from "@orpc/server";
-import { appRouter } from "@auxchamp/api/routers";
+import { appRouter } from "@auxchamp/api/router";
 
 export function createApi(request: Request) {
   return createRouterClient(appRouter, {
@@ -57,7 +57,7 @@ import { createGameSchema } from "./schemas";
 
 export const create_game = command(createGameSchema, async (input) => {
   const api = createApi(getRequestEvent().request);
-  return api.game.create(input);
+  return api.createGame(input);
 });
 ```
 
@@ -72,7 +72,7 @@ transport.
 ```typescript
 // apps/slack-bot/src/api.ts
 import { createORPCClient } from "@orpc/client";
-import type { AppRouter } from "@auxchamp/api/routers";
+import type { AppRouter } from "@auxchamp/api/router";
 
 export const api = createORPCClient<AppRouter>({
   baseURL: process.env.API_URL + "/rpc",

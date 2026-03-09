@@ -149,7 +149,7 @@ apps/
 Notes:
 
 - Keep `appRouter` as a composition root, not a dumping ground.
-- Keep domain logic in `packages/api/src/game/*`; router handlers should stay thin.
+- Keep domain logic in `packages/api/src/*`; router handlers should stay thin.
 - Keep UI-specific behavior in `apps/web`.
 
 ---
@@ -414,9 +414,9 @@ Expose the shared game domain cleanly across transport surfaces and add the play
 
 ### In scope
 
-- `packages/api/src/routers/game.ts`
-- compose game router into `appRouter`
+- `packages/api/src/router.ts`
 - keep handlers thin: parse, auth, call, map error
+- keep the public API surface flat and game-specific
 - define playlist adapter interface
 - fake playlist adapter for tests/dev
 - real Spotify adapter with env-driven credentials
@@ -463,7 +463,7 @@ Make the MVP resistant to concurrency, stale writes, and the first wave of unhap
 ## Risks to control
 
 1. **Rule duplication across transport layers**
-   - Keep domain logic in `packages/api/src/game/*` only.
+   - Keep domain logic in `packages/api/src/*` only.
 2. **Over-abstracting early**
    - No generic FSM or repository layer in Milestone 1.
 3. **Premature completeness**
