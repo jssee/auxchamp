@@ -1,25 +1,24 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
+
 	import { saveSubmission } from '$lib/game.remote';
 
-	const {
-		gameId,
-		initialTrackUrl = '',
-		initialNote = '',
-		hasExisting,
-	}: {
+	type Props = {
 		gameId: string;
 		initialTrackUrl?: string;
 		initialNote?: string;
 		hasExisting: boolean;
-	} = $props();
+	};
 
-	// Intentionally capture initial values once so user edits survive invalidation.
-	saveSubmission.fields.spotifyTrackUrl.set(initialTrackUrl);
-	saveSubmission.fields.note.set(initialNote);
+	const props: Props = $props();
+
+	// Capture initial values once so user edits survive invalidation without relying on reactive props.
+	saveSubmission.fields.spotifyTrackUrl.set(untrack(() => props.initialTrackUrl ?? ''));
+	saveSubmission.fields.note.set(untrack(() => props.initialNote ?? ''));
 </script>
 
 <form class="space-y-2" {...saveSubmission}>
-	<input {...saveSubmission.fields.gameId.as('hidden', gameId)} />
+	<input {...saveSubmission.fields.gameId.as('hidden', props.gameId)} />
 	<div class="flex flex-col gap-1">
 		<label class="text-sm" for="spotify-track-url">Spotify track URL</label>
 		<input
@@ -49,7 +48,7 @@
 	>
 		{#if saveSubmission.pending > 0}
 			Submitting...
-		{:else if hasExisting}
+		{:else if props.hasExisting}
 			Update Submission
 		{:else}
 			Submit
