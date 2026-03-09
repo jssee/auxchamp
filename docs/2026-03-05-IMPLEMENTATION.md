@@ -254,11 +254,11 @@ Implement only the command surface needed for the demo:
 - `invitePlayer`
 - `acceptInvite`
 - `startGame`
-- `upsertSubmission`
+- `saveSubmission`
 
 Keep each write small and explicit.
 
-Use one transaction per command. `startGame` should move the game to `active` and open round 1 in the same transaction. `upsertSubmission` should only succeed for an active player on the active round while submission is open.
+Use one transaction per command. `startGame` should move the game to `active` and open round 1 in the same transaction. `saveSubmission` should only succeed for an active player on the active round while submission is open.
 
 Do not build architecture that this slice does not use.
 
@@ -317,7 +317,7 @@ These rules shape the domain and should be enforced in Milestone 1:
    - wire schema exports cleanly
 
 2. **Command services in `@auxchamp/api`**
-   - implement `createGame`, `addRound`, `invitePlayer`, `acceptInvite`, `startGame`, `upsertSubmission`
+   - implement `createGame`, `addRound`, `invitePlayer`, `acceptInvite`, `startGame`, `saveSubmission`
    - keep invariants close to the write path
    - keep transaction and locking behavior simple but correct for start and submission
 
