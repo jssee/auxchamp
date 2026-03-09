@@ -24,6 +24,7 @@
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
+    "drizzle-orm": "catalog:",
     "nanoid": "^3.3.11",
     "valibot": "catalog:"
   },
