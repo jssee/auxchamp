@@ -1,52 +1,44 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Field from '$lib/components/ui/field/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { createGame } from '$lib/game.remote';
 </script>
 
-<form class="space-y-4" {...createGame}>
-	{#each createGame.fields.allIssues() as issue}
-		<p class="text-sm text-red-500" role="alert">{issue.message}</p>
-	{/each}
+<form {...createGame}>
+	<Field.Group class="gap-4">
+		<Field.Field data-invalid={createGame.fields.name.issues()?.length ? 'true' : undefined}>
+			<Field.Label for="name">Name</Field.Label>
+			<Input id="name" required {...createGame.fields.name.as('text')} />
+			<Field.Error errors={createGame.fields.name.issues()} />
+		</Field.Field>
 
-	<div class="space-y-1">
-		<label for="name">Name</label>
-		<input id="name" type="text" class="w-full border px-3 py-2" required {...createGame.fields.name.as('text')} />
-		{#each createGame.fields.name.issues() as issue}
-			<p class="text-xs text-red-500">{issue.message}</p>
-		{/each}
-	</div>
+		<Field.Field data-invalid={createGame.fields.description.issues()?.length ? 'true' : undefined}>
+			<Field.Label for="description">Description</Field.Label>
+			<Textarea id="description" rows={2} {...createGame.fields.description.as('text')} />
+			<Field.Description>Optional. Add context players should see before round one starts.</Field.Description>
+			<Field.Error errors={createGame.fields.description.issues()} />
+		</Field.Field>
 
-	<div class="space-y-1">
-		<label for="description">Description</label>
-		<textarea
-			id="description"
-			class="w-full border px-3 py-2"
-			rows="2"
-			{...createGame.fields.description.as('text')}
-		></textarea>
-	</div>
+		<div class="grid gap-4 sm:grid-cols-2">
+			<Field.Field data-invalid={createGame.fields.submissionWindowDays.issues()?.length ? 'true' : undefined}>
+				<Field.Label for="submissionDays">Submission window (days)</Field.Label>
+				<Input id="submissionDays" min="1" step="1" {...createGame.fields.submissionWindowDays.as('number')} />
+				<Field.Description>How long players have to submit a track each round.</Field.Description>
+				<Field.Error errors={createGame.fields.submissionWindowDays.issues()} />
+			</Field.Field>
 
-	<div class="grid grid-cols-2 gap-4">
-		<div class="space-y-1">
-			<label for="submissionDays">Submission window (days)</label>
-			<input
-				id="submissionDays"
-				min="1"
-				class="w-full border px-3 py-2"
-				{...createGame.fields.submissionWindowDays.as('number')}
-			/>
+			<Field.Field data-invalid={createGame.fields.votingWindowDays.issues()?.length ? 'true' : undefined}>
+				<Field.Label for="votingDays">Voting window (days)</Field.Label>
+				<Input id="votingDays" min="1" step="1" {...createGame.fields.votingWindowDays.as('number')} />
+				<Field.Description>How long players can vote after submissions close.</Field.Description>
+				<Field.Error errors={createGame.fields.votingWindowDays.issues()} />
+			</Field.Field>
 		</div>
-		<div class="space-y-1">
-			<label for="votingDays">Voting window (days)</label>
-			<input
-				id="votingDays"
-				min="1"
-				class="w-full border px-3 py-2"
-				{...createGame.fields.votingWindowDays.as('number')}
-			/>
-		</div>
-	</div>
 
-	<button type="submit" class="w-full border px-4 py-2 font-medium" disabled={createGame.pending > 0}>
-		{createGame.pending > 0 ? 'Creating...' : 'Create Game'}
-	</button>
+		<Button type="submit" class="w-full" disabled={createGame.pending > 0}>
+			{createGame.pending > 0 ? 'Creating...' : 'Create Game'}
+		</Button>
+	</Field.Group>
 </form>
