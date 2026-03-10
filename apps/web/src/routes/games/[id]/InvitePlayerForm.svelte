@@ -1,21 +1,32 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Field from '$lib/components/ui/field/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { invitePlayer } from '$lib/game.remote';
 
 	let { gameId }: { gameId: string } = $props();
 </script>
 
-<form class="mt-3 flex gap-2" {...invitePlayer}>
+<form class="mt-3" {...invitePlayer}>
 	<input {...invitePlayer.fields.gameId.as('hidden', gameId)} />
-	<input
-		placeholder="Invite by email"
-		class="flex-1 border px-3 py-1 text-sm"
-		required
-		{...invitePlayer.fields.targetUserEmail.as('email')}
-	/>
-	<button type="submit" class="border px-3 py-1 text-sm" disabled={invitePlayer.pending > 0}>
-		{invitePlayer.pending > 0 ? 'Inviting...' : 'Invite'}
-	</button>
+
+	<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+		<Field.Field
+			class="min-w-0"
+			data-invalid={invitePlayer.fields.targetUserEmail.issues()?.length ? 'true' : undefined}
+		>
+			<Field.Label for="invite-player-email">Invite by email</Field.Label>
+			<Input
+				id="invite-player-email"
+				placeholder="Invite by email"
+				required
+				{...invitePlayer.fields.targetUserEmail.as('email')}
+			/>
+			<Field.Error errors={invitePlayer.fields.targetUserEmail.issues()} />
+		</Field.Field>
+
+		<Button type="submit" class="w-full self-start sm:mt-6 sm:w-auto" disabled={invitePlayer.pending > 0}>
+			{invitePlayer.pending > 0 ? 'Inviting...' : 'Invite'}
+		</Button>
+	</div>
 </form>
-{#each invitePlayer.fields.targetUserEmail.issues() as issue}
-	<p class="mt-1 text-xs text-red-500">{issue.message}</p>
-{/each}
