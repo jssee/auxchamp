@@ -6,7 +6,24 @@
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".svelte-kit/**", "build/**"],
-      "env": ["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL", "CORS_ORIGIN"]
+      "env": ["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL", "CORS_ORIGIN"],
+      "passThroughEnv": [
+        "POSTGRES_PRISMA_URL",
+        "DATABASE_URL_UNPOOLED",
+        "POSTGRES_HOST",
+        "POSTGRES_PASSWORD",
+        "PGPASSWORD",
+        "POSTGRES_DATABASE",
+        "NEON_PROJECT_ID",
+        "PGDATABASE",
+        "PGUSER",
+        "POSTGRES_URL_NO_SSL",
+        "POSTGRES_URL",
+        "POSTGRES_URL_NON_POOLING",
+        "PGHOST",
+        "PGHOST_UNPOOLED",
+        "POSTGRES_USER"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
