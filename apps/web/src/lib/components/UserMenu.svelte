@@ -17,8 +17,8 @@
 		});
 	}
 
-	function goToLogin() {
-		goto('/login');
+	function goTosignin() {
+		goto('/signin');
 	}
 </script>
 
@@ -41,7 +41,7 @@
 	{:else}
 		<div class="flex items-center gap-2">
 			<button
-				onclick={goToLogin}
+				onclick={goTosignin}
 				class="rounded bg-indigo-600 px-3 py-1 text-sm text-white transition-colors hover:bg-indigo-700"
 			>
 				Sign In
