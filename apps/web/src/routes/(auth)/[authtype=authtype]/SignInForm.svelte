@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { signIn } from "$lib/auth/auth.remote";
+  import { Button } from "$lib/components/ui/button";
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
-  import { Button } from "$lib/components/ui/button";
+
+  import { signIn } from "./auth.remote";
 
   let id = $props.id();
 </script>
@@ -39,7 +40,7 @@
         <Field.Error>{issue.message}</Field.Error>
       {/each}
     </Field.Field>
-    <Button type="submit">Sign up</Button>
+
+    <Button type="submit">Sign in</Button>
   </Field.Set>
 </form>
-

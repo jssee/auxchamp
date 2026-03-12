@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
   import * as Card from "$lib/components/ui/card";
-  import SignInForm from "$lib/components/auth/SignInForm.svelte";
-  import SignUpForm from "$lib/components/auth/SignUpForm.svelte";
+  import SignInForm from "./SignInForm.svelte";
+  import SignUpForm from "./SignUpForm.svelte";
 
   const isSignUp = $derived(page.params.authtype === "signup");
   const redirectTo = $derived(page.url.searchParams.get("redirectTo"));

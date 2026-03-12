@@ -9,6 +9,8 @@ import {
   createGameOutputSchema,
   getGameInputSchema,
   getGameOutputSchema,
+  getPublicProfileInputSchema,
+  getPublicProfileOutputSchema,
   healthOutputSchema,
   invitePlayerInputSchema,
   invitePlayerOutputSchema,
@@ -27,6 +29,7 @@ import {
  */
 export const contract = {
   health: oc.output(healthOutputSchema),
+  getPublicProfile: oc.input(getPublicProfileInputSchema).output(getPublicProfileOutputSchema),
   createGame: oc.input(createGameInputSchema).output(createGameOutputSchema),
   addRound: oc.input(addRoundInputSchema).output(addRoundOutputSchema),
   invitePlayer: oc.input(invitePlayerInputSchema).output(invitePlayerOutputSchema),

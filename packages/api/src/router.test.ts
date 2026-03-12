@@ -28,6 +28,20 @@ afterEach(async () => {
   createdUserIds.clear();
 });
 
+test("top-level getPublicProfile remains accessible without a session", async () => {
+  const profileOwner = await createTestUser("Alice");
+  const api = createRouterClient(appRouter, {
+    context: () => ({}) as any,
+  });
+
+  await expect(api.getPublicProfile({ username: profileOwner.username })).resolves.toMatchObject({
+    id: profileOwner.id,
+    username: profileOwner.username,
+    displayUsername: profileOwner.displayUsername,
+    name: "Alice",
+  });
+});
+
 test("top-level saveSubmission rejects non-track Spotify URLs at the procedure boundary", async () => {
   const { gameId, submitter } = await setupActiveGame();
   const api = createRouterClient(appRouter, {
@@ -98,12 +112,16 @@ async function createTestUser(name?: string) {
 
   createdUserIds.add(id);
 
+  const username = id.toLowerCase();
+
   const [createdUser] = await db
     .insert(user)
     .values({
       id,
       name: name ?? `Test ${id}`,
       email: `${id}@example.com`,
+      username,
+      displayUsername: username,
     })
     .returning();
 

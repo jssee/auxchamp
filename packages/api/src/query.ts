@@ -1,8 +1,25 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
+import { user } from "@auxchamp/db/schema/auth";
 import { game, submission } from "@auxchamp/db/schema/game";
-import type { GetGameOutput } from "./schema";
+import type { GetGameOutput, GetPublicProfileOutput } from "./schema";
+
+export async function getPublicProfile(username: string): Promise<GetPublicProfileOutput> {
+  const profile = await db.query.user.findFirst({
+    where: eq(user.username, username),
+    columns: {
+      id: true,
+      username: true,
+      displayUsername: true,
+      name: true,
+      image: true,
+      createdAt: true,
+    },
+  });
+
+  return profile ?? null;
+}
 
 export async function getGame(actorUserId: string, gameId: string): Promise<GetGameOutput> {
   const row = await db.query.game.findFirst({

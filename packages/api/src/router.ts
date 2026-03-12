@@ -12,10 +12,13 @@ import {
   saveSubmission,
 } from "./mutation";
 import { protectedProcedure, publicProcedure } from "./procedure";
-import { getGame } from "./query";
+import { getGame, getPublicProfile } from "./query";
 
 export const appRouter = publicProcedure.router({
   health: publicProcedure.health.handler(() => "OK"),
+  getPublicProfile: publicProcedure.getPublicProfile.handler(({ input }) => {
+    return getPublicProfile(input.username);
+  }),
   createGame: protectedProcedure.createGame.handler(({ context, input }) => {
     return createGame(context.session.user.id, input);
   }),

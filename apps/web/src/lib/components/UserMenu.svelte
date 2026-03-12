@@ -29,7 +29,9 @@
 		{@const user = $sessionQuery.data.user}
 		<div class="flex items-center gap-3">
 			<span class="hidden text-sm text-neutral-300 sm:inline" title={user.email}>
-				{user.name || user.email?.split('@')[0] || 'User'}
+				{user.name && user.name !== user.username
+					? user.name
+					: user.displayUsername || user.username || user.email?.split('@')[0] || 'User'}
 			</span>
 			<button
 				onclick={handleSignOut}

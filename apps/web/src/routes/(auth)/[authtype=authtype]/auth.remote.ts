@@ -1,31 +1,37 @@
 import * as v from "valibot";
-import { auth } from ".";
-import { getRequestEvent } from "$app/server";
-import { db } from "@auxchamp/db";
-import { user } from "@auxchamp/db/schema";
-import { eq } from "drizzle-orm";
+import { form, getRequestEvent } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
-import { form } from "$app/server";
-import { signInSchema, signUpSchema } from "./schema";
+
+import { auth } from "$lib/auth";
+import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
 
 export const signUp = form(signUpSchema, async (data, invalid) => {
-  const { name, email, password } = data;
+  const { username, name, email, password } = data;
   const { url } = getRequestEvent();
 
   try {
-    const existingUsername = await db.query.user.findFirst({
-      where: eq(user.name, name),
+    const normalizedName = normalizeOptionalString(name);
+
+    await auth.api.signUpEmail({
+      body: {
+        username,
+        name: normalizedName ?? username,
+        email,
+        password,
+      },
     });
-
-    if (existingUsername) {
-      invalid.name("Username already taken");
-    }
-
-    await auth.api.signUpEmail({ body: { name, email, password } });
   } catch (err) {
     console.error(err);
-    invalid(getAuthErrorMessage(err, "Sign up failed. Please try again."));
+
+    const message = getAuthErrorMessage(err, "Sign up failed. Please try again.");
+
+    if (message.toLowerCase().includes("username")) {
+      invalid.username(message);
+    }
+
+    invalid(message);
   }
+
   const redirectTo = url.searchParams.get("redirectTo");
   const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
 
@@ -34,6 +40,7 @@ export const signUp = form(signUpSchema, async (data, invalid) => {
 
 export const signOut = form(async () => {
   const { request, url } = getRequestEvent();
+
   try {
     await auth.api.signOut({
       headers: request.headers,
@@ -42,6 +49,7 @@ export const signOut = form(async () => {
     console.error(err);
     return error(500, { message: "Something went wrong" });
   }
+
   const redirectTo = url.searchParams.get("redirectTo");
   const safeRedirect = sanitizeRedirect(redirectTo, url, "/");
 
@@ -58,6 +66,7 @@ export const signIn = form(signInSchema, async (data, invalid) => {
     console.error(err);
     invalid(getAuthErrorMessage(err, "Sign in failed. Please try again."));
   }
+
   const redirectTo = url.searchParams.get("redirectTo");
   const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
 
@@ -110,6 +119,15 @@ function getAuthErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function normalizeOptionalString(value: string | undefined) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 const sanitizeRedirect = (redirectTo: string | null, baseUrl: URL, fallback: string) => {

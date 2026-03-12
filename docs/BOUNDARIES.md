@@ -13,11 +13,17 @@ The API package is the source of truth for:
 - **Business logic** — domain commands, queries, invariants
 - **Authorization** — procedure middleware (`protectedProcedure`, `publicProcedure`)
 - **Validation** — input schemas on procedures
-- **Data access** — database queries, transactions
+- **Data access** — database queries, transactions for app-facing reads and writes
 
 The router is the canonical interface. Domain commands like `createGame`
 and `addRound` are internal to the package — they are called by
 procedures, not by consumers.
+
+Auth-managed identity rules are the exception. Better Auth owns signup,
+signin, signout, username normalization, and username uniqueness. The API
+may read auth-managed tables when serving app queries such as public
+profiles, but it does not become the source of truth for those identity
+rules.
 
 ## The server-side client
 
@@ -118,30 +124,42 @@ procedure.
 
 ## Decision record
 
-| Concern                  | Owner           | Notes                                      |
-| ------------------------ | --------------- | ------------------------------------------ |
-| Domain logic             | API procedures  | Commands, queries, invariants              |
-| Authorization            | API middleware  | `protectedProcedure`                       |
-| Input validation         | API procedures  | Procedure-level schemas                    |
-| Form UX validation       | Remote function | `command(schema, ...)` for client feedback, often reusing `@auxchamp/api/schema` |
-| Database access          | API             | Drizzle queries, transactions              |
-| Session/context          | API context     | `createContext()` from request headers     |
-| Error translation        | Remote function | Map oRPC errors to frontend results        |
-| Initial page data        | Load function   | `+page.server.ts` via server-side client   |
-| User-initiated mutations | Remote function | `command()` via server-side client         |
-| User-initiated fetches   | Remote function | `query()` via server-side client           |
+| Concern                               | Owner           | Notes                                                                             |
+| ------------------------------------- | --------------- | --------------------------------------------------------------------------------- |
+| Domain logic                          | API procedures  | Commands, queries, invariants                                                     |
+| Authorization                         | API middleware  | `protectedProcedure`                                                              |
+| Input validation                      | API procedures  | Procedure-level schemas                                                           |
+| Form UX validation                    | Remote function | `command(schema, ...)` for client feedback, often reusing `@auxchamp/api/schema`  |
+| Database access                       | API             | Drizzle queries, transactions for app behavior                                    |
+| Session/context                       | API context     | `createContext()` from request headers                                            |
+| Error translation                     | Remote function | Map oRPC errors to frontend results                                               |
+| Initial page data                     | Load function   | `+page.server.ts` via server-side client                                          |
+| User-initiated mutations              | Remote function | `command()` via server-side client                                                |
+| User-initiated fetches                | Remote function | `query()` via server-side client                                                  |
+| Public profile reads (`/u/:username`) | API             | App-facing query; may read Better Auth tables, but still goes through the router  |
+| Username validation / normalization   | Better Auth     | The username plugin is the source of truth                                        |
+| Username uniqueness / availability    | Better Auth     | Check and enforce through Better Auth, not custom API or direct DB queries in web |
 
-## Exception: auth transport
+## Exception: Better Auth-owned identity flows
 
-`signIn` and `signUp` in `app.remote.ts` call Better Auth's API
-directly (`auth.api.signInEmail`, `auth.api.signUpEmail`). These do not
-go through the oRPC router.
+`signIn`, `signUp`, and `signOut` in the auth route call Better Auth's
+API directly (`auth.api.signInEmail`, `auth.api.signUpEmail`,
+`auth.api.signOut`). Username checks and future username updates follow
+the same rule.
 
 This is intentional. Better Auth has its own request handler, session
-management, and cookie logic. Wrapping it behind oRPC procedures would
-add indirection with no benefit — the auth library is the source of
-truth for authentication, not our API layer.
+management, cookie logic, and plugin-owned username semantics.
+Wrapping username availability or uniqueness behind custom oRPC
+procedures would duplicate normalization and conflict rules in the wrong
+layer.
 
-The rule: **authentication transport** (sign in, sign up, sign out,
-OAuth callbacks) calls Better Auth directly. **Everything else** goes
-through the oRPC router.
+The rule:
+
+- **Authentication transport and auth-owned identity behavior** call
+  Better Auth directly.
+- **App-facing reads and business logic** go through the oRPC router.
+- **Web does not query auth tables directly**, even when the data lives
+  in Better Auth-managed tables.
+
+Example: signup and username availability go to Better Auth directly,
+while loading `/u/:username` goes through an API query.

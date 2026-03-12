@@ -16,7 +16,8 @@
     "@auxchamp/db": "workspace:*",
     "@auxchamp/env": "workspace:*",
     "better-auth": "catalog:",
-    "dotenv": "catalog:"
+    "dotenv": "catalog:",
+    "valibot": "catalog:"
   },
   "devDependencies": {
     "@auxchamp/config": "workspace:*",
