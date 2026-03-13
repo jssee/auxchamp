@@ -1,6 +1,8 @@
 import * as v from "valibot";
 import { form, getRequestEvent } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
+import { BASE_ERROR_CODES } from "better-auth";
+import { USERNAME_ERROR_CODES } from "better-auth/plugins/username";
 
 import { auth } from "$lib/auth";
 import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
@@ -23,10 +25,15 @@ export const signUp = form(signUpSchema, async (data, invalid) => {
   } catch (err) {
     console.error(err);
 
+    const code = getAuthErrorCode(err);
     const message = getAuthErrorMessage(err, "Sign up failed. Please try again.");
 
-    if (message.toLowerCase().includes("username")) {
+    if (code && SIGN_UP_USERNAME_ERROR_CODES.has(code)) {
       invalid.username(message);
+    }
+
+    if (code && SIGN_UP_EMAIL_ERROR_CODES.has(code)) {
+      invalid.email(message);
     }
 
     invalid(message);
@@ -95,6 +102,35 @@ export const updatePassword = form(
     redirect(302, "/signout");
   },
 );
+
+const SIGN_UP_USERNAME_ERROR_CODES: ReadonlySet<string> = new Set([
+  USERNAME_ERROR_CODES.USERNAME_IS_ALREADY_TAKEN.code,
+  USERNAME_ERROR_CODES.USERNAME_TOO_SHORT.code,
+  USERNAME_ERROR_CODES.USERNAME_TOO_LONG.code,
+  USERNAME_ERROR_CODES.INVALID_USERNAME.code,
+]);
+
+const SIGN_UP_EMAIL_ERROR_CODES: ReadonlySet<string> = new Set([
+  BASE_ERROR_CODES.USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL.code,
+  BASE_ERROR_CODES.INVALID_EMAIL.code,
+]);
+
+function getAuthErrorCode(error: unknown) {
+  if (typeof error !== "object" || error === null) {
+    return null;
+  }
+
+  if ("body" in error && typeof error.body === "object" && error.body !== null) {
+    const code = "code" in error.body ? error.body.code : null;
+
+    if (typeof code === "string") {
+      return code;
+    }
+  }
+
+  const code = "code" in error ? error.code : null;
+  return typeof code === "string" ? code : null;
+}
 
 function getAuthErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) {

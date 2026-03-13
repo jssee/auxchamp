@@ -41,6 +41,17 @@ test("returns a public profile by username", async () => {
   });
 });
 
+test("normalizes username lookup for public profiles", async () => {
+  const profileOwner = await createTestUser("Alice");
+
+  const profile = await getPublicProfile(profileOwner.username.toUpperCase());
+
+  expect(profile).toMatchObject({
+    id: profileOwner.id,
+    username: profileOwner.username,
+  });
+});
+
 test("returns null for a missing public profile", async () => {
   const profile = await getPublicProfile("missing_user");
 
