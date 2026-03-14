@@ -1,19 +1,25 @@
 <script lang="ts">
-  let { data } = $props();
-
-  const displayName = $derived(
-    data.profile.name === data.profile.username ? data.profile.displayUsername : data.profile.name,
-  );
+  const { data } = $props();
 </script>
 
-<svelte:head>
-  <title>{displayName} · AuxChamp</title>
-</svelte:head>
+<div class="container mx-auto max-w-2xl space-y-8 px-4 py-12">
+  <header class="space-y-2">
+    <p class="text-sm text-neutral-400">Public profile</p>
+    <h1 class="font-bold text-4xl">
+      {data.profile.name !== data.profile.username ? data.profile.name : data.profile.displayUsername}
+    </h1>
+    <p class="text-lg text-neutral-400">@{data.profile.displayUsername}</p>
+  </header>
 
-<div class="col-content py-10">
-  <div class="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6 shadow-sm">
-    <p class="text-sm text-muted-foreground">Profile</p>
-    <h1 class="mt-2 text-3xl font-semibold tracking-tight">{displayName}</h1>
-    <p class="mt-1 text-muted-foreground">@{data.profile.displayUsername}</p>
-  </div>
+  <dl class="grid gap-6 sm:grid-cols-2">
+    <div class="space-y-1">
+      <dt class="text-sm text-neutral-400">Username</dt>
+      <dd class="font-medium text-lg">@{data.profile.displayUsername}</dd>
+    </div>
+
+    <div class="space-y-1">
+      <dt class="text-sm text-neutral-400">Joined</dt>
+      <dd class="font-medium text-lg">{new Date(data.profile.createdAt).toLocaleDateString()}</dd>
+    </div>
+  </dl>
 </div>

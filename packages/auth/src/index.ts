@@ -24,6 +24,14 @@ export function createAuth({ plugins = [] }: CreateAuthOptions = {}) {
     emailAndPassword: {
       enabled: true,
     },
+    user: {
+      changeEmail: {
+        enabled: true,
+        // Minimal until transactional email exists. Replace with a verified flow once
+        // we send confirmation emails for email changes.
+        updateEmailWithoutVerification: true,
+      },
+    },
     advanced: {
       defaultCookieAttributes: {
         sameSite: "none",
