@@ -1,11 +1,15 @@
 import { form, getRequestEvent } from "$app/server";
 import { error, redirect } from "@sveltejs/kit";
-import { BASE_ERROR_CODES } from "@better-auth/core/error";
-import { USERNAME_ERROR_CODES } from "better-auth/plugins/username";
 
 import { auth } from "$lib/auth";
 import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
-import { getAuthErrorCode, getAuthErrorMessage, normalizeOptionalString } from "$lib/auth/utils";
+import {
+  EMAIL_AUTH_ERROR_CODES,
+  USERNAME_AUTH_ERROR_CODES,
+  getAuthErrorCode,
+  getAuthErrorMessage,
+  normalizeOptionalString,
+} from "$lib/auth/utils";
 
 export const signUp = form(signUpSchema, async (data, invalid) => {
   const { username, name, email, password } = data;
@@ -28,11 +32,11 @@ export const signUp = form(signUpSchema, async (data, invalid) => {
     const code = getAuthErrorCode(err);
     const message = getAuthErrorMessage(err, "Sign up failed. Please try again.");
 
-    if (code && SIGN_UP_USERNAME_ERROR_CODES.has(code)) {
+    if (code && USERNAME_AUTH_ERROR_CODES.has(code)) {
       invalid.username(message);
     }
 
-    if (code && SIGN_UP_EMAIL_ERROR_CODES.has(code)) {
+    if (code && EMAIL_AUTH_ERROR_CODES.has(code)) {
       invalid.email(message);
     }
 
@@ -79,18 +83,6 @@ export const signIn = form(signInSchema, async (data, invalid) => {
 
   redirect(302, safeRedirect);
 });
-
-const SIGN_UP_USERNAME_ERROR_CODES: ReadonlySet<string> = new Set([
-  USERNAME_ERROR_CODES.USERNAME_IS_ALREADY_TAKEN.code,
-  USERNAME_ERROR_CODES.USERNAME_TOO_SHORT.code,
-  USERNAME_ERROR_CODES.USERNAME_TOO_LONG.code,
-  USERNAME_ERROR_CODES.INVALID_USERNAME.code,
-]);
-
-const SIGN_UP_EMAIL_ERROR_CODES: ReadonlySet<string> = new Set([
-  BASE_ERROR_CODES.USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL.code,
-  BASE_ERROR_CODES.INVALID_EMAIL.code,
-]);
 
 const sanitizeRedirect = (redirectTo: string | null, baseUrl: URL, fallback: string) => {
   if (!redirectTo) {

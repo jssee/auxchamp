@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { updateEmail, updatePassword, updateProfile } from "$lib/account.remote";
+  import { updateEmail, updatePassword, updateProfile } from "./account.remote";
   import { Button } from "$lib/components/ui/button";
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
