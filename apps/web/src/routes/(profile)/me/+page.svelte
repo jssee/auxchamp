@@ -6,14 +6,14 @@
 
   const { data } = $props();
 
-  const getInitialUsername = () => data.user.username ?? data.user.displayUsername ?? "";
+  const getDisplayUsername = () => data.user.displayUsername ?? data.user.username ?? "";
   const getInitialName = () => (data.user.name === data.user.username ? "" : data.user.name ?? "");
   const getInitialDisplayName = () =>
-    data.user.name !== data.user.username ? data.user.name : getInitialUsername();
+    data.user.name !== data.user.username ? data.user.name : getDisplayUsername();
   const getInitialEmail = () => data.user.email;
   const emailUpdatesNeedVerification = () => data.user.emailVerified;
 
-  updateProfile.fields.username.set(getInitialUsername());
+  updateProfile.fields.username.set(getDisplayUsername());
   updateProfile.fields.name.set(getInitialName());
   updateEmail.fields.email.set(getInitialEmail());
 </script>
@@ -28,7 +28,7 @@
       Signed in as {updateEmail.result?.email ?? data.user.email} ·
       <a
         class="underline underline-offset-4 hover:text-white"
-        href={`/u/${updateProfile.result?.username ?? getInitialUsername()}`}
+        href={`/u/${updateProfile.result?.displayUsername ?? getDisplayUsername()}`}
       >
         View public profile
       </a>

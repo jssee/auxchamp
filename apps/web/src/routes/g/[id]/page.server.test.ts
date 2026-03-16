@@ -12,7 +12,7 @@ test("redirects unauthenticated requests to /signin", async () => {
   try {
     await load({
       params: { id: "game_123" },
-      request: new Request("http://localhost/games/game_123"),
+      request: new Request("http://localhost/g/game_123"),
     } as never);
 
     throw new Error("Expected load to redirect.");
