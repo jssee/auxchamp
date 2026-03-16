@@ -1,5 +1,5 @@
 import { form, getRequestEvent } from "$app/server";
-import { error, redirect } from "@sveltejs/kit";
+import { error, invalid, redirect } from "@sveltejs/kit";
 
 import { auth } from "$lib/auth";
 import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
@@ -11,7 +11,7 @@ import {
   normalizeOptionalString,
 } from "$lib/auth/utils";
 
-export const signUp = form(signUpSchema, async (data, invalid) => {
+export const signUp = form(signUpSchema, async (data, issue) => {
   const { username, name, email, password } = data;
   const { url } = getRequestEvent();
 
@@ -33,18 +33,18 @@ export const signUp = form(signUpSchema, async (data, invalid) => {
     const message = getAuthErrorMessage(err, "Sign up failed. Please try again.");
 
     if (code && USERNAME_AUTH_ERROR_CODES.has(code)) {
-      invalid.username(message);
+      invalid(issue.username(message));
     }
 
     if (code && EMAIL_AUTH_ERROR_CODES.has(code)) {
-      invalid.email(message);
+      invalid(issue.email(message));
     }
 
     invalid(message);
   }
 
   const redirectTo = url.searchParams.get("redirectTo");
-  const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
+  const safeRedirect = sanitizeRedirect(redirectTo, url, "/");
 
   redirect(302, safeRedirect);
 });
@@ -67,7 +67,7 @@ export const signOut = form(async () => {
   redirect(302, safeRedirect);
 });
 
-export const signIn = form(signInSchema, async (data, invalid) => {
+export const signIn = form(signInSchema, async (data, _issue) => {
   const { email, password } = data;
   const { url } = getRequestEvent();
 
@@ -79,7 +79,7 @@ export const signIn = form(signInSchema, async (data, invalid) => {
   }
 
   const redirectTo = url.searchParams.get("redirectTo");
-  const safeRedirect = sanitizeRedirect(redirectTo, url, "/home");
+  const safeRedirect = sanitizeRedirect(redirectTo, url, "/");
 
   redirect(302, safeRedirect);
 });

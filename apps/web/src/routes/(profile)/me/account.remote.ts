@@ -1,5 +1,5 @@
 import { form, getRequestEvent } from "$app/server";
-import { error } from "@sveltejs/kit";
+import { error, invalid } from "@sveltejs/kit";
 
 import { auth } from "$lib/auth";
 import {
@@ -15,7 +15,7 @@ import {
   updateProfileSchema,
 } from "@auxchamp/auth/schema";
 
-export const updateProfile = form(updateProfileSchema, async (data, invalid) => {
+export const updateProfile = form(updateProfileSchema, async (data, issue) => {
   const { request } = getRequestEvent();
   const normalizedName = normalizeOptionalString(data.name);
 
@@ -34,7 +34,7 @@ export const updateProfile = form(updateProfileSchema, async (data, invalid) => 
     const message = getAuthErrorMessage(err, "Profile update failed. Please try again.");
 
     if (code && USERNAME_AUTH_ERROR_CODES.has(code)) {
-      invalid.username(message);
+      invalid(issue.username(message));
     }
 
     invalid(message);
@@ -43,11 +43,12 @@ export const updateProfile = form(updateProfileSchema, async (data, invalid) => 
   return {
     message: "Profile updated.",
     username: data.username,
+    displayUsername: data.username,
     name: normalizedName ?? data.username,
   };
 });
 
-export const updateEmail = form(changeEmailSchema, async (data, invalid) => {
+export const updateEmail = form(changeEmailSchema, async (data, issue) => {
   const { request } = getRequestEvent();
   const session = await auth.api.getSession({ headers: request.headers });
 
@@ -75,7 +76,7 @@ export const updateEmail = form(changeEmailSchema, async (data, invalid) => {
     const message = getAuthErrorMessage(err, "Email update failed. Please try again.");
 
     if (code && EMAIL_AUTH_ERROR_CODES.has(code)) {
-      invalid.email(message);
+      invalid(issue.email(message));
     }
 
     invalid(message);
@@ -87,7 +88,7 @@ export const updateEmail = form(changeEmailSchema, async (data, invalid) => {
   };
 });
 
-export const updatePassword = form(changePasswordSchema, async (data, invalid) => {
+export const updatePassword = form(changePasswordSchema, async (data) => {
   const { request } = getRequestEvent();
 
   try {
