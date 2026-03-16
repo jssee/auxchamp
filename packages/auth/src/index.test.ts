@@ -1,8 +1,13 @@
 import { expect, test } from "bun:test";
+import dotenv from "dotenv";
 
-import { auth, createAuth } from "./index";
+dotenv.config({
+  path: new URL("../../../apps/web/.env", import.meta.url).pathname,
+});
 
-test("createAuth allows framework-specific plugins without changing the shared auth export", () => {
+const { auth, createAuth } = await import("./index");
+
+test("createAuth keeps the shared username plugin while allowing framework-specific plugins", () => {
   const plugin = {
     id: "test-plugin",
   };
@@ -11,6 +16,8 @@ test("createAuth allows framework-specific plugins without changing the shared a
 
   expect(auth).toBeDefined();
   expect(appAuth).toBeDefined();
+  expect(auth.options.plugins.some((entry) => entry.id === "username")).toBeTrue();
+  expect(appAuth.options.plugins.some((entry) => entry.id === "username")).toBeTrue();
   expect(appAuth.options.plugins).toContain(plugin);
   expect(auth.options.plugins).not.toContain(plugin);
 });

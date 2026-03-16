@@ -8,11 +8,11 @@ dotenv.config({
 
 const { load } = await import("./+page.server");
 
-test("redirects unauthenticated requests to /login", async () => {
+test("redirects unauthenticated requests to /signin", async () => {
   try {
     await load({
       params: { id: "game_123" },
-      request: new Request("http://localhost/games/game_123"),
+      request: new Request("http://localhost/g/game_123"),
     } as never);
 
     throw new Error("Expected load to redirect.");
@@ -21,7 +21,7 @@ test("redirects unauthenticated requests to /login", async () => {
 
     if (isRedirect(thrown)) {
       expect(thrown.status).toBe(303);
-      expect(thrown.location).toBe("/login");
+      expect(thrown.location).toBe("/signin");
     }
   }
 });

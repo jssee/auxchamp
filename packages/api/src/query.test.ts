@@ -11,7 +11,7 @@ const { game } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
 const { acceptInvite, addRound, createGame, invitePlayer, startGame, saveSubmission } =
   await import("./mutation");
-const { getGame } = await import("./query");
+const { getGame, getPublicProfile } = await import("./query");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -26,6 +26,36 @@ afterEach(async () => {
     await db.delete(user).where(eq(user.id, userId));
   }
   createdUserIds.clear();
+});
+
+test("returns a public profile by username", async () => {
+  const profileOwner = await createTestUser("Alice");
+
+  const profile = await getPublicProfile(profileOwner.username);
+
+  expect(profile).toMatchObject({
+    id: profileOwner.id,
+    username: profileOwner.username,
+    displayUsername: profileOwner.displayUsername,
+    name: "Alice",
+  });
+});
+
+test("normalizes username lookup for public profiles", async () => {
+  const profileOwner = await createTestUser("Alice");
+
+  const profile = await getPublicProfile(profileOwner.username.toUpperCase());
+
+  expect(profile).toMatchObject({
+    id: profileOwner.id,
+    username: profileOwner.username,
+  });
+});
+
+test("returns null for a missing public profile", async () => {
+  const profile = await getPublicProfile("missing_user");
+
+  expect(profile).toBeNull();
 });
 
 test("returns game metadata, players, and rounds for a draft game", async () => {
@@ -167,12 +197,16 @@ async function createTestUser(name?: string) {
 
   createdUserIds.add(id);
 
+  const username = id.toLowerCase();
+
   const [createdUser] = await db
     .insert(user)
     .values({
       id,
       name: name ?? `Test ${id}`,
       email: `${id}@example.com`,
+      username,
+      displayUsername: username,
     })
     .returning();
 

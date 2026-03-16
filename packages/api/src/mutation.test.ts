@@ -581,12 +581,16 @@ async function createTestUser() {
 
   createdUserIds.add(id);
 
+  const username = id.toLowerCase();
+
   const [createdUser] = await db
     .insert(user)
     .values({
       id,
       name: `Test ${id}`,
       email: `${id}@example.com`,
+      username,
+      displayUsername: username,
     })
     .returning();
 

@@ -17,6 +17,23 @@ const roundPhaseValues = ["pending", "submitting", "voting", "scored"] as const;
 export const healthOutputSchema = v.literal("OK");
 export type HealthOutput = v.InferOutput<typeof healthOutputSchema>;
 
+export const getPublicProfileInputSchema = v.object({
+  username: v.pipe(v.string(), v.minLength(1, "Username is required")),
+});
+export type GetPublicProfileInput = v.InferOutput<typeof getPublicProfileInputSchema>;
+
+export const getPublicProfileOutputSchema = v.nullable(
+  v.object({
+    id: v.string(),
+    username: v.string(),
+    displayUsername: v.string(),
+    name: v.string(),
+    image: v.nullable(v.string()),
+    createdAt: v.date(),
+  }),
+);
+export type GetPublicProfileOutput = v.InferOutput<typeof getPublicProfileOutputSchema>;
+
 export const createGameInputSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, "Name is required")),
   description: v.optional(v.string()),

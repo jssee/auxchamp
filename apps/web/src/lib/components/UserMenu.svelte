@@ -17,8 +17,8 @@
 		});
 	}
 
-	function goToLogin() {
-		goto('/login');
+	function goTosignin() {
+		goto('/signin');
 	}
 </script>
 
@@ -29,8 +29,18 @@
 		{@const user = $sessionQuery.data.user}
 		<div class="flex items-center gap-3">
 			<span class="hidden text-sm text-neutral-300 sm:inline" title={user.email}>
-				{user.name || user.email?.split('@')[0] || 'User'}
+				<a href={user.username ? `/u/${user.username}` : '/me'} class="hover:text-white">
+					{user.name && user.name !== user.username
+						? user.name
+						: user.displayUsername || user.username || user.email?.split('@')[0] || 'User'}
+				</a>
 			</span>
+			<a
+				href="/me"
+				class="rounded bg-neutral-800 px-3 py-1 text-sm text-white transition-colors hover:bg-neutral-700"
+			>
+				Settings
+			</a>
 			<button
 				onclick={handleSignOut}
 				class="rounded bg-red-600 px-3 py-1 text-sm text-white transition-colors hover:bg-red-700"
@@ -41,7 +51,7 @@
 	{:else}
 		<div class="flex items-center gap-2">
 			<button
-				onclick={goToLogin}
+				onclick={goTosignin}
 				class="rounded bg-indigo-600 px-3 py-1 text-sm text-white transition-colors hover:bg-indigo-700"
 			>
 				Sign In

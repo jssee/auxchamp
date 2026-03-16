@@ -19,7 +19,7 @@ export const createGame = form(createGameInputSchema, async (input, issue) => {
 
   try {
     const result = await api.createGame(input);
-    redirect(303, `/games/${result.gameId}`);
+    redirect(303, `/g/${result.gameId}`);
   } catch (thrown) {
     rethrowAsIssue(thrown, issue.name("Unable to create game."));
   }

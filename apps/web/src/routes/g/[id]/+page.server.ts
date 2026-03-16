@@ -16,7 +16,7 @@ export const load = async ({ params, request }) => {
     return { game };
   } catch (thrown) {
     if (thrown instanceof ORPCError && thrown.code === "UNAUTHORIZED") {
-      redirect(303, "/login");
+      redirect(303, "/signin");
     }
 
     throw thrown;

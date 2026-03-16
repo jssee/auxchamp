@@ -3,6 +3,14 @@ import * as schema from "@auxchamp/db/schema/auth";
 import { env } from "@auxchamp/env/server";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { username } from "better-auth/plugins/username";
+
+import {
+  normalizeUsername,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  USERNAME_PATTERN,
+} from "./config";
 
 type CreateAuthOptions = Pick<BetterAuthOptions, "plugins">;
 
@@ -16,6 +24,14 @@ export function createAuth({ plugins = [] }: CreateAuthOptions = {}) {
     emailAndPassword: {
       enabled: true,
     },
+    user: {
+      changeEmail: {
+        enabled: true,
+        // Minimal until transactional email exists. Replace with a verified flow once
+        // we send confirmation emails for email changes.
+        updateEmailWithoutVerification: true,
+      },
+    },
     advanced: {
       defaultCookieAttributes: {
         sameSite: "none",
@@ -23,7 +39,15 @@ export function createAuth({ plugins = [] }: CreateAuthOptions = {}) {
         httpOnly: true,
       },
     },
-    plugins,
+    plugins: [
+      username({
+        minUsernameLength: USERNAME_MIN_LENGTH,
+        maxUsernameLength: USERNAME_MAX_LENGTH,
+        usernameNormalization: normalizeUsername,
+        usernameValidator: (candidate) => USERNAME_PATTERN.test(candidate),
+      }),
+      ...plugins,
+    ],
   });
 }
 
