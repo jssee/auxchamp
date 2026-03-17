@@ -54,12 +54,3 @@ export function getAuthErrorMessage(error: unknown, fallback: string) {
 
   return fallback;
 }
-
-export function normalizeOptionalString(value: string | undefined) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}

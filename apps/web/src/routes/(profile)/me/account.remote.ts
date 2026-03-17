@@ -7,13 +7,13 @@ import {
   USERNAME_AUTH_ERROR_CODES,
   getAuthErrorCode,
   getAuthErrorMessage,
-  normalizeOptionalString,
-} from "$lib/auth/utils";
+} from "@auxchamp/auth/errors";
 import {
   changeEmailSchema,
   changePasswordSchema,
   updateProfileSchema,
 } from "@auxchamp/auth/schema";
+import { normalizeOptionalString } from "$lib/auth/utils.server";
 
 export const updateProfile = form(updateProfileSchema, async (data, issue) => {
   const { request } = getRequestEvent();

@@ -2,14 +2,14 @@ import { form, getRequestEvent } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 
 import { auth } from "$lib/auth";
-import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
 import {
   EMAIL_AUTH_ERROR_CODES,
   USERNAME_AUTH_ERROR_CODES,
   getAuthErrorCode,
   getAuthErrorMessage,
-  normalizeOptionalString,
-} from "$lib/auth/utils";
+} from "@auxchamp/auth/errors";
+import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
+import { normalizeOptionalString } from "$lib/auth/utils.server";
 
 export const signUp = form(signUpSchema, async (data, issue) => {
   const { username, name, email, password } = data;

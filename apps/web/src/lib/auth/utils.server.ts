@@ -20,3 +20,12 @@ export async function requireSession(request: Request, url: URL, message?: strin
 
   return session;
 }
+
+export function normalizeOptionalString(value: string | undefined) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
