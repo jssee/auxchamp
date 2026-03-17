@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from "./config";
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from "./username";
 
 const usernameSchema = v.pipe(
   v.string(),
