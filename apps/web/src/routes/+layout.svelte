@@ -3,6 +3,7 @@
     import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
 
     import Header from '$lib/components/Header.svelte';
+    import { Toaster } from '$lib/components/ui/sonner';
     import favicon from "$lib/assets/favicon.svg";
 	import '../app.css';
 
@@ -22,6 +23,7 @@
 </svelte:head>
 
 <ModeWatcher />
+<Toaster />
 
 <div class="grid h-svh grid-rows-[auto_1fr]">
 	<Header />

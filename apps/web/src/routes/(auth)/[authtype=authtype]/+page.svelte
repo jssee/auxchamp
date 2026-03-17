@@ -1,11 +1,19 @@
 <script lang="ts">
   import { page } from "$app/state";
+  import { toast } from "svelte-sonner";
   import * as Card from "$lib/components/ui/card";
   import SignInForm from "./SignInForm.svelte";
   import SignUpForm from "./SignUpForm.svelte";
 
   const isSignUp = $derived(page.params.authtype === "signup");
   const redirectTo = $derived(page.url.searchParams.get("redirectTo"));
+  const message = $derived(page.url.searchParams.get("message"));
+
+  $effect(() => {
+    if (message) {
+      toast.info(message);
+    }
+  });
 </script>
 
 <main class="col-content grid h-full place-items-center">
