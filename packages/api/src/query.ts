@@ -1,6 +1,6 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 
-import { normalizeUsername } from "@auxchamp/auth/username";
+import { normalizeUsername } from "@auxchamp/auth/utils";
 import { db } from "@auxchamp/db";
 import { user } from "@auxchamp/db/schema/auth";
 import { game, submission } from "@auxchamp/db/schema/game";
