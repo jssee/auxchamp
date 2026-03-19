@@ -24,7 +24,7 @@ test("redirects unauthenticated requests to /signin with return path and message
       const location = new URL(thrown.location, "http://localhost");
       expect(location.pathname).toBe("/signin");
       expect(location.searchParams.get("redirectTo")).toBe("/g/new");
-      expect(location.searchParams.get("message")).toBe("Sign in to create a game");
+      expect(location.searchParams.get("message")).toBe("sign-in-create-game");
     }
   }
 });

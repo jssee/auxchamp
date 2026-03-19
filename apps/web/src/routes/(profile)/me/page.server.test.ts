@@ -24,7 +24,7 @@ test("redirects unauthenticated requests to /signin with a return path", async (
       const location = new URL(thrown.location, "http://localhost");
       expect(location.pathname).toBe("/signin");
       expect(location.searchParams.get("redirectTo")).toBe("/me");
-      expect(location.searchParams.get("message")).toBe("Sign in to view your profile");
+      expect(location.searchParams.get("message")).toBe("sign-in-profile");
     }
   }
 });

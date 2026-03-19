@@ -1,13 +1,25 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { toast } from "svelte-sonner";
+  import { AUTH_MESSAGES } from "$lib/auth/messages";
   import * as Card from "$lib/components/ui/card";
   import SignInForm from "./SignInForm.svelte";
   import SignUpForm from "./SignUpForm.svelte";
 
   const isSignUp = $derived(page.params.authtype === "signup");
-  const redirectTo = $derived(page.url.searchParams.get("redirectTo"));
-  const message = $derived(page.url.searchParams.get("message"));
+
+  /** Only trust relative paths that start with a single slash. */
+  const redirectTo = $derived.by(() => {
+    const raw = page.url.searchParams.get("redirectTo");
+    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+    return raw;
+  });
+
+  /** Resolve message code to a static string; ignore unknown codes. */
+  const message = $derived.by(() => {
+    const code = page.url.searchParams.get("message");
+    return code ? AUTH_MESSAGES[code] ?? null : null;
+  });
 
   $effect(() => {
     if (message) {
