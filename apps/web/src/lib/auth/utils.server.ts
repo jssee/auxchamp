@@ -25,12 +25,3 @@ export async function requireSession(request: Request, url: URL, messageCode?: A
 
   return session;
 }
-
-export function normalizeOptionalString(value: string | undefined) {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}

@@ -9,7 +9,7 @@ import {
   getAuthErrorMessage,
 } from "@auxchamp/auth/errors";
 import { signInSchema, signUpSchema } from "@auxchamp/auth/schema";
-import { normalizeOptionalString } from "$lib/auth/utils.server";
+import { normalizeOptionalString } from "$lib/utils";
 
 export const signUp = form(signUpSchema, async (data, issue) => {
   const { username, name, email, password } = data;

@@ -13,7 +13,7 @@ import {
   changePasswordSchema,
   updateProfileSchema,
 } from "@auxchamp/auth/schema";
-import { normalizeOptionalString } from "$lib/auth/utils.server";
+import { normalizeOptionalString } from "$lib/utils";
 
 export const updateProfile = form(updateProfileSchema, async (data, issue) => {
   const { request } = getRequestEvent();
