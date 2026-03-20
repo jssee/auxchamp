@@ -15,6 +15,13 @@
       "when": 1773636294805,
       "tag": "0001_gigantic_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774034293633,
+      "tag": "0002_flaky_vulture",
+      "breakpoints": true
     }
   ]
 }

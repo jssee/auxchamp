@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { index, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
 import { user } from "../auth";
+import { ballot } from "./ballot";
 import { game } from "./game";
 import { submission } from "./submission";
 
@@ -45,4 +46,5 @@ export const playerRelations = relations(player, ({ many, one }) => ({
     references: [user.id],
   }),
   submissions: many(submission),
+  ballots: many(ballot),
 }));
