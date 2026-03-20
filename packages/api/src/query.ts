@@ -1,9 +1,9 @@
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 
 import { normalizeUsername } from "@auxchamp/auth/utils";
 import { db } from "@auxchamp/db";
 import { user } from "@auxchamp/db/schema/auth";
-import { game, submission } from "@auxchamp/db/schema/game";
+import { ballot, game, star, submission } from "@auxchamp/db/schema/game";
 import type { GetGameOutput, GetPublicProfileOutput } from "./schema";
 
 export async function getPublicProfile(username: string): Promise<GetPublicProfileOutput> {
@@ -46,6 +46,8 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
           phase: true,
           submissionOpensAt: true,
           submissionClosesAt: true,
+          votingOpensAt: true,
+          votingClosesAt: true,
         },
         orderBy: (round) => [asc(round.number)],
       },
@@ -80,9 +82,11 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
           ).map((entry) => [entry.roundId, entry.submissionCount]),
         );
 
-  const activeRound = row.rounds.find((round) => round.phase === "submitting") ?? null;
+  const activeRound =
+    row.rounds.find((r) => r.phase === "submitting" || r.phase === "voting") ?? null;
+
   const actorSubmission =
-    activeRound === null
+    activeRound === null || activeRound.phase !== "submitting"
       ? null
       : await db.query.submission.findFirst({
           where: and(
@@ -96,6 +100,126 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
             submittedAt: true,
           },
         });
+
+  // Voting-phase data: actor's ballot and the submissions to vote on.
+  let actorBallot: { ballotId: string; submissionIds: string[] } | null = null;
+  let votingSubmissions:
+    | {
+        id: string;
+        playerId: string;
+        spotifyTrackUrl: string;
+        note: string | null;
+      }[]
+    | null = null;
+
+  if (activeRound?.phase === "voting") {
+    const actorBallotRow = await db.query.ballot.findFirst({
+      where: and(eq(ballot.roundId, activeRound.id), eq(ballot.playerId, actorPlayer.id)),
+      columns: { id: true },
+      with: {
+        stars: { columns: { submissionId: true } },
+      },
+    });
+
+    if (actorBallotRow) {
+      actorBallot = {
+        ballotId: actorBallotRow.id,
+        submissionIds: actorBallotRow.stars.map((s) => s.submissionId),
+      };
+    }
+
+    votingSubmissions = await db
+      .select({
+        id: submission.id,
+        playerId: submission.playerId,
+        spotifyTrackUrl: submission.spotifyTrackUrl,
+        note: submission.note,
+      })
+      .from(submission)
+      .where(eq(submission.roundId, activeRound.id));
+  }
+
+  // Round results for scored rounds: star counts per submission.
+  const scoredRounds = row.rounds.filter((r) => r.phase === "scored");
+  const roundResults: {
+    roundId: string;
+    roundNumber: number;
+    submissions: {
+      submissionId: string;
+      playerId: string;
+      spotifyTrackUrl: string;
+      starCount: number;
+    }[];
+  }[] = [];
+
+  if (scoredRounds.length > 0) {
+    const scoredRoundIds = scoredRounds.map((r) => r.id);
+
+    // Get all submissions for scored rounds with star counts.
+    const submissionsWithStars = await db
+      .select({
+        submissionId: submission.id,
+        roundId: submission.roundId,
+        playerId: submission.playerId,
+        spotifyTrackUrl: submission.spotifyTrackUrl,
+        starCount: sql<number>`cast(count(${star.id}) as int)`,
+      })
+      .from(submission)
+      .leftJoin(star, eq(star.submissionId, submission.id))
+      .where(inArray(submission.roundId, scoredRoundIds))
+      .groupBy(submission.id, submission.roundId, submission.playerId, submission.spotifyTrackUrl);
+
+    // Group by round.
+    const byRound = new Map<
+      string,
+      { submissionId: string; playerId: string; spotifyTrackUrl: string; starCount: number }[]
+    >();
+
+    for (const row of submissionsWithStars) {
+      let list = byRound.get(row.roundId);
+      if (!list) {
+        list = [];
+        byRound.set(row.roundId, list);
+      }
+      list.push({
+        submissionId: row.submissionId,
+        playerId: row.playerId,
+        spotifyTrackUrl: row.spotifyTrackUrl,
+        starCount: row.starCount,
+      });
+    }
+
+    for (const sr of scoredRounds) {
+      roundResults.push({
+        roundId: sr.id,
+        roundNumber: sr.number,
+        submissions: (byRound.get(sr.id) ?? []).sort((a, b) => b.starCount - a.starCount),
+      });
+    }
+  }
+
+  // Cumulative standings across all scored rounds.
+  const standings: { playerId: string; totalStars: number }[] = [];
+
+  if (scoredRounds.length > 0) {
+    const scoredRoundIds = scoredRounds.map((r) => r.id);
+
+    const totals = await db
+      .select({
+        playerId: submission.playerId,
+        totalStars: sql<number>`cast(count(${star.id}) as int)`,
+      })
+      .from(submission)
+      .leftJoin(star, eq(star.submissionId, submission.id))
+      .where(inArray(submission.roundId, scoredRoundIds))
+      .groupBy(submission.playerId);
+
+    for (const t of totals) {
+      standings.push({ playerId: t.playerId, totalStars: t.totalStars });
+    }
+
+    standings.sort((a, b) => b.totalStars - a.totalStars);
+  }
 
   return {
     id: row.id,
@@ -137,6 +261,8 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
           phase: activeRound.phase,
           submissionOpensAt: activeRound.submissionOpensAt,
           submissionClosesAt: activeRound.submissionClosesAt,
+          votingOpensAt: activeRound.votingOpensAt,
+          votingClosesAt: activeRound.votingClosesAt,
         }
       : null,
 
@@ -154,5 +280,10 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
           submittedAt: actorSubmission.submittedAt,
         }
       : null,
+
+    actorBallot,
+    votingSubmissions,
+    roundResults,
+    standings,
   };
 }

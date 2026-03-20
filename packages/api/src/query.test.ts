@@ -9,8 +9,16 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame, saveSubmission } =
-  await import("./mutation");
+const {
+  acceptInvite,
+  addRound,
+  advanceRound,
+  createGame,
+  invitePlayer,
+  saveBallot,
+  startGame,
+  saveSubmission,
+} = await import("./mutation");
 const { getGame, getPublicProfile } = await import("./query");
 
 const createdGameIds = new Set<string>();
@@ -163,6 +171,100 @@ test("returns null for a non-member", async () => {
   const outsider = await createTestUser("Outsider");
   const detail = await getGame(outsider.id, gameId);
   expect(detail).toBeNull();
+});
+
+test("returns voting state with actorBallot and votingSubmissions", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  // All players submit.
+  const allPlayers = [creator, ...players];
+  for (let i = 0; i < allPlayers.length; i++) {
+    await saveSubmission(allPlayers[i]!.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/t${i}`,
+    });
+  }
+
+  // Advance to voting.
+  await advanceRound(creator.id, { gameId });
+
+  // Player 0 has not voted yet.
+  const beforeVote = await getGame(players[0]!.id, gameId);
+  expect(beforeVote!.activeRound).toMatchObject({ phase: "voting" });
+  expect(beforeVote!.activeRound!.votingOpensAt).toBeInstanceOf(Date);
+  expect(beforeVote!.votingSubmissions).toHaveLength(allPlayers.length);
+  expect(beforeVote!.actorBallot).toBeNull();
+  expect(beforeVote!.actorSubmission).toBeNull(); // Not in submitting phase.
+
+  // Player 0 votes.
+  const subs = beforeVote!.votingSubmissions!;
+  const voterPlayerId = beforeVote!.actorPlayer.id;
+  const targets = subs.filter((s) => s.playerId !== voterPlayerId).slice(0, 3);
+  await saveBallot(players[0]!.id, {
+    gameId,
+    submissionIds: targets.map((t) => t.id),
+  });
+
+  const afterVote = await getGame(players[0]!.id, gameId);
+  expect(afterVote!.actorBallot).toMatchObject({
+    ballotId: expect.any(String),
+    submissionIds: expect.arrayContaining(targets.map((t) => t.id)),
+  });
+});
+
+test("returns roundResults and standings after scoring", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  const allPlayers = [creator, ...players];
+  for (let i = 0; i < allPlayers.length; i++) {
+    await saveSubmission(allPlayers[i]!.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/t${i}`,
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // submitting → voting
+
+  // All players vote.
+  const gameDetail = await getGame(creator.id, gameId);
+  const subs = gameDetail!.votingSubmissions!;
+
+  for (const voter of allPlayers) {
+    const voterDetail = await getGame(voter.id, gameId);
+    const voterPlayerId = voterDetail!.actorPlayer.id;
+    const targets = subs.filter((s) => s.playerId !== voterPlayerId).slice(0, 3);
+    await saveBallot(voter.id, {
+      gameId,
+      submissionIds: targets.map((t) => t.id),
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // voting → scored
+
+  const scored = await getGame(creator.id, gameId);
+
+  expect(scored!.roundResults).toHaveLength(1);
+  expect(scored!.roundResults[0]!.roundNumber).toBe(1);
+  expect(scored!.roundResults[0]!.submissions.length).toBe(allPlayers.length);
+
+  // Each submission should have a starCount >= 0.
+  for (const sub of scored!.roundResults[0]!.submissions) {
+    expect(sub.starCount).toBeGreaterThanOrEqual(0);
+    expect(sub.submissionId).toBeTypeOf("string");
+    expect(sub.playerId).toBeTypeOf("string");
+  }
+
+  // Results should be sorted by starCount descending.
+  const counts = scored!.roundResults[0]!.submissions.map((s) => s.starCount);
+  for (let i = 1; i < counts.length; i++) {
+    expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]!);
+  }
+
+  // Standings should cover all players.
+  expect(scored!.standings.length).toBeGreaterThan(0);
+  const totalStars = scored!.standings.reduce((sum, s) => sum + s.totalStars, 0);
+  // Each voter gives 3 stars, so total = playerCount * 3.
+  expect(totalStars).toBe(allPlayers.length * 3);
 });
 
 // -- test helpers ---------------------------------------------------------

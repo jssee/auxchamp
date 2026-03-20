@@ -157,6 +157,8 @@ const activeRoundSchema = v.object({
   phase: v.picklist(roundPhaseValues),
   submissionOpensAt: v.nullable(v.date()),
   submissionClosesAt: v.nullable(v.date()),
+  votingOpensAt: v.nullable(v.date()),
+  votingClosesAt: v.nullable(v.date()),
 });
 
 type ActiveRound = v.InferOutput<typeof activeRoundSchema>;
@@ -177,6 +179,44 @@ const actorSubmissionSchema = v.object({
 });
 
 type ActorSubmission = v.InferOutput<typeof actorSubmissionSchema>;
+
+const actorBallotSchema = v.object({
+  ballotId: v.string(),
+  submissionIds: v.array(v.string()),
+});
+
+type ActorBallot = v.InferOutput<typeof actorBallotSchema>;
+
+const votingSubmissionSchema = v.object({
+  id: v.string(),
+  playerId: v.string(),
+  spotifyTrackUrl: v.string(),
+  note: v.nullable(v.string()),
+});
+
+type VotingSubmission = v.InferOutput<typeof votingSubmissionSchema>;
+
+const roundResultSubmissionSchema = v.object({
+  submissionId: v.string(),
+  playerId: v.string(),
+  spotifyTrackUrl: v.string(),
+  starCount: v.number(),
+});
+
+const roundResultSchema = v.object({
+  roundId: v.string(),
+  roundNumber: v.number(),
+  submissions: v.array(roundResultSubmissionSchema),
+});
+
+type RoundResult = v.InferOutput<typeof roundResultSchema>;
+
+const standingSchema = v.object({
+  playerId: v.string(),
+  totalStars: v.number(),
+});
+
+type Standing = v.InferOutput<typeof standingSchema>;
 
 export const getGameInputSchema = v.object({
   gameId: v.string(),
@@ -199,6 +239,10 @@ export const getGameOutputSchema = v.nullable(
     activeRound: v.nullable(activeRoundSchema),
     actorPlayer: actorPlayerSchema,
     actorSubmission: v.nullable(actorSubmissionSchema),
+    actorBallot: v.nullable(actorBallotSchema),
+    votingSubmissions: v.nullable(v.array(votingSubmissionSchema)),
+    roundResults: v.array(roundResultSchema),
+    standings: v.array(standingSchema),
   }),
 );
 export type GetGameOutput = v.InferOutput<typeof getGameOutputSchema>;
@@ -232,4 +276,14 @@ export const saveBallotOutputSchema = v.object({
 });
 export type SaveBallotOutput = v.InferOutput<typeof saveBallotOutputSchema>;
 
-export type { ActiveRound, ActorPlayer, ActorSubmission, Player, Round };
+export type {
+  ActiveRound,
+  ActorBallot,
+  ActorPlayer,
+  ActorSubmission,
+  Player,
+  Round,
+  RoundResult,
+  Standing,
+  VotingSubmission,
+};
