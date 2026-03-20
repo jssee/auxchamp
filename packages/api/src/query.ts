@@ -4,6 +4,8 @@ import { normalizeUsername } from "@auxchamp/auth/utils";
 import { db } from "@auxchamp/db";
 import { user } from "@auxchamp/db/schema/auth";
 import { ballot, game, star, submission } from "@auxchamp/db/schema/game";
+import type { Action } from "./capability";
+import { getAllowedActions } from "./capability";
 import type { GetGameOutput, GetPublicProfileOutput } from "./schema";
 
 export async function getPublicProfile(username: string): Promise<GetPublicProfileOutput> {
@@ -139,9 +141,9 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
       .where(eq(submission.roundId, activeRound.id));
   }
 
-  // Round results for scored rounds: star counts per submission.
+  // Round results and standings for scored rounds.
   const scoredRounds = row.rounds.filter((r) => r.phase === "scored");
-  const roundResults: {
+  let roundResults: {
     roundId: string;
     roundNumber: number;
     submissions: {
@@ -151,11 +153,11 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
       starCount: number;
     }[];
   }[] = [];
+  let standings: { playerId: string; totalStars: number }[] = [];
 
   if (scoredRounds.length > 0) {
     const scoredRoundIds = scoredRounds.map((r) => r.id);
 
-    // Get all submissions for scored rounds with star counts.
     const submissionsWithStars = await db
       .select({
         submissionId: submission.id,
@@ -169,57 +171,47 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
       .where(inArray(submission.roundId, scoredRoundIds))
       .groupBy(submission.id, submission.roundId, submission.playerId, submission.spotifyTrackUrl);
 
-    // Group by round.
-    const byRound = new Map<
-      string,
-      { submissionId: string; playerId: string; spotifyTrackUrl: string; starCount: number }[]
-    >();
+    // Group by round for per-round results.
+    const byRound = Map.groupBy(submissionsWithStars, (s) => s.roundId);
 
-    for (const row of submissionsWithStars) {
-      let list = byRound.get(row.roundId);
-      if (!list) {
-        list = [];
-        byRound.set(row.roundId, list);
-      }
-      list.push({
-        submissionId: row.submissionId,
-        playerId: row.playerId,
-        spotifyTrackUrl: row.spotifyTrackUrl,
-        starCount: row.starCount,
-      });
-    }
+    roundResults = scoredRounds.map((sr) => ({
+      roundId: sr.id,
+      roundNumber: sr.number,
+      submissions: (byRound.get(sr.id) ?? [])
+        .map((s) => ({
+          submissionId: s.submissionId,
+          playerId: s.playerId,
+          spotifyTrackUrl: s.spotifyTrackUrl,
+          starCount: s.starCount,
+        }))
+        .sort((a, b) => b.starCount - a.starCount),
+    }));
 
-    for (const sr of scoredRounds) {
-      roundResults.push({
-        roundId: sr.id,
-        roundNumber: sr.number,
-        submissions: (byRound.get(sr.id) ?? []).sort((a, b) => b.starCount - a.starCount),
-      });
+    // Derive cumulative standings from the same data (no extra query).
+    const starsByPlayer = new Map<string, number>();
+    for (const s of submissionsWithStars) {
+      starsByPlayer.set(s.playerId, (starsByPlayer.get(s.playerId) ?? 0) + s.starCount);
     }
+    standings = [...starsByPlayer.entries()]
+      .map(([playerId, totalStars]) => ({ playerId, totalStars }))
+      .sort((a, b) => b.totalStars - a.totalStars);
   }
 
-  // Cumulative standings across all scored rounds.
-  const standings: { playerId: string; totalStars: number }[] = [];
-
-  if (scoredRounds.length > 0) {
-    const scoredRoundIds = scoredRounds.map((r) => r.id);
-
-    const totals = await db
-      .select({
-        playerId: submission.playerId,
-        totalStars: sql<number>`cast(count(${star.id}) as int)`,
-      })
-      .from(submission)
-      .leftJoin(star, eq(star.submissionId, submission.id))
-      .where(inArray(submission.roundId, scoredRoundIds))
-      .groupBy(submission.playerId);
-
-    for (const t of totals) {
-      standings.push({ playerId: t.playerId, totalStars: t.totalStars });
-    }
-
-    standings.sort((a, b) => b.totalStars - a.totalStars);
-  }
+  // activeRound is found by phase === "submitting" | "voting", so its phase
+  // is already narrowed. Cast satisfies CapabilityContext's union type.
+  const actions: Action[] = [
+    ...getAllowedActions({
+      gameState: row.state,
+      activeRoundPhase: (activeRound?.phase as "submitting" | "voting") ?? null,
+      actorRole: actorPlayer.role,
+      actorStatus: actorPlayer.status,
+      activePlayerCount: row.players.filter((p) => p.status === "active").length,
+      roundCount: row.rounds.length,
+      submissionClosesAt: activeRound?.submissionClosesAt ?? null,
+      votingClosesAt: activeRound?.votingClosesAt ?? null,
+      now: new Date(),
+    }),
+  ];
 
   return {
     id: row.id,
@@ -285,5 +277,6 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
     votingSubmissions,
     roundResults,
     standings,
+    actions,
   };
 }

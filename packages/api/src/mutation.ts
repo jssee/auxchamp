@@ -463,21 +463,27 @@ export async function advanceRound(
       throw new ORPCError("FORBIDDEN", { message: "Only the creator can advance the round." });
     }
 
-    // Find the active round (submitting or voting).
-    const [activeRound] = await tx
-      .select({
-        id: round.id,
-        number: round.number,
-        phase: round.phase,
-      })
-      .from(round)
-      .where(
-        and(
-          eq(round.gameId, input.gameId),
-          or(eq(round.phase, "submitting"), eq(round.phase, "voting")),
-        ),
-      )
-      .limit(1);
+    // Fetch game config and active round in parallel.
+    const [[gameRow], [activeRound]] = await Promise.all([
+      tx
+        .select({
+          submissionWindowDays: game.submissionWindowDays,
+          votingWindowDays: game.votingWindowDays,
+        })
+        .from(game)
+        .where(eq(game.id, input.gameId))
+        .limit(1),
+      tx
+        .select({ id: round.id, number: round.number, phase: round.phase })
+        .from(round)
+        .where(
+          and(
+            eq(round.gameId, input.gameId),
+            or(eq(round.phase, "submitting"), eq(round.phase, "voting")),
+          ),
+        )
+        .limit(1),
+    ]);
 
     if (!activeRound) {
       throw new ORPCError("PRECONDITION_FAILED", {
@@ -486,10 +492,10 @@ export async function advanceRound(
     }
 
     if (activeRound.phase === "submitting") {
-      return advanceSubmittingToVoting(tx, input.gameId, activeRound);
+      return advanceSubmittingToVoting(tx, activeRound, gameRow!.votingWindowDays);
     }
 
-    return advanceVotingToScored(tx, input.gameId, activeRound);
+    return advanceVotingToScored(tx, input.gameId, activeRound, gameRow!.submissionWindowDays);
   });
 }
 
@@ -497,20 +503,12 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function advanceSubmittingToVoting(
   tx: Tx,
-  gameId: string,
   activeRound: { id: string; number: number; phase: string },
+  votingWindowDays: number,
 ): Promise<AdvanceRoundOutput> {
   const now = new Date();
-
-  // Look up the game's voting window to set votingClosesAt.
-  const [gameRow] = await tx
-    .select({ votingWindowDays: game.votingWindowDays })
-    .from(game)
-    .where(eq(game.id, gameId))
-    .limit(1);
-
   const votingClosesAt = new Date(now);
-  votingClosesAt.setDate(votingClosesAt.getDate() + (gameRow?.votingWindowDays ?? 3));
+  votingClosesAt.setDate(votingClosesAt.getDate() + votingWindowDays);
 
   await tx
     .update(round)
@@ -530,6 +528,7 @@ async function advanceVotingToScored(
   tx: Tx,
   gameId: string,
   activeRound: { id: string; number: number; phase: string },
+  submissionWindowDays: number,
 ): Promise<AdvanceRoundOutput> {
   // Mark the round as scored.
   await tx.update(round).set({ phase: "scored" }).where(eq(round.id, activeRound.id));
@@ -543,16 +542,9 @@ async function advanceVotingToScored(
     .limit(1);
 
   if (nextRound) {
-    // Open the next round for submission.
     const now = new Date();
-    const [gameRow] = await tx
-      .select({ submissionWindowDays: game.submissionWindowDays })
-      .from(game)
-      .where(eq(game.id, gameId))
-      .limit(1);
-
     const submissionClosesAt = new Date(now);
-    submissionClosesAt.setDate(submissionClosesAt.getDate() + (gameRow?.submissionWindowDays ?? 7));
+    submissionClosesAt.setDate(submissionClosesAt.getDate() + submissionWindowDays);
 
     await tx
       .update(round)

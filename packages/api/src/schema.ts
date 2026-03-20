@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { actionValues } from "./capability";
 import { isSpotifyTrackUrl } from "./util";
 
 /**
@@ -243,6 +244,7 @@ export const getGameOutputSchema = v.nullable(
     votingSubmissions: v.nullable(v.array(votingSubmissionSchema)),
     roundResults: v.array(roundResultSchema),
     standings: v.array(standingSchema),
+    actions: v.array(v.picklist(actionValues)),
   }),
 );
 export type GetGameOutput = v.InferOutput<typeof getGameOutputSchema>;

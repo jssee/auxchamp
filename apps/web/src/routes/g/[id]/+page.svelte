@@ -9,27 +9,8 @@
 	const { data } = $props();
 	let game = $derived(data.game);
 
-	let isCreator = $derived(game.actorPlayer?.role === 'creator');
-	let isDraft = $derived(game.state === 'draft');
-	let isActive = $derived(game.state === 'active');
-	let canStart = $derived(
-		isCreator &&
-			isDraft &&
-			game.rounds.length >= 1 &&
-			game.players.filter((p) => p.status === 'active').length >= 4,
-	);
-	let isInvited = $derived(game.actorPlayer?.status === 'invited');
-	let canSubmit = $derived(
-		game.actorPlayer?.status === 'active' &&
-			game.activeRound !== null &&
-			game.activeRound.phase === 'submitting',
-	);
-	let canVote = $derived(
-		game.actorPlayer?.status === 'active' &&
-			game.activeRound !== null &&
-			game.activeRound.phase === 'voting',
-	);
-	let canAdvance = $derived(isCreator && isActive && game.activeRound !== null);
+	// Server computes allowed actions; the client just checks membership.
+	let can = $derived((action: (typeof game.actions)[number]) => game.actions.includes(action));
 
 	// Map playerId → player name for display in voting/results/standings.
 	let playerNameById = $derived(
@@ -50,6 +31,16 @@
 
 	let error = $state('');
 
+	async function run(fn: () => Promise<unknown>) {
+		error = '';
+		try {
+			await fn();
+			await invalidateAll();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Something went wrong.';
+		}
+	}
+
 	function toggleStar(submissionId: string) {
 		const next = new Set(selectedSubmissions);
 		if (next.has(submissionId)) {
@@ -60,45 +51,10 @@
 		selectedSubmissions = next;
 	}
 
-	async function handleAccept() {
-		error = '';
-		try {
-			await acceptInvite({ gameId: game.id });
-			await invalidateAll();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong.';
-		}
-	}
-
-	async function handleStart() {
-		error = '';
-		try {
-			await startGame({ gameId: game.id });
-			await invalidateAll();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong.';
-		}
-	}
-
-	async function handleAdvanceRound() {
-		error = '';
-		try {
-			await advanceRound({ gameId: game.id });
-			await invalidateAll();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong.';
-		}
-	}
-
-	async function handleSaveBallot() {
-		error = '';
-		try {
-			await saveBallot({ gameId: game.id, submissionIds: [...selectedSubmissions] });
-			await invalidateAll();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong.';
-		}
-	}
+	const handleAccept = () => run(() => acceptInvite({ gameId: game.id }));
+	const handleStart = () => run(() => startGame({ gameId: game.id }));
+	const handleAdvanceRound = () => run(() => advanceRound({ gameId: game.id }));
+	const handleSaveBallot = () => run(() => saveBallot({ gameId: game.id, submissionIds: [...selectedSubmissions] }));
 </script>
 
 <div class="container mx-auto max-w-2xl space-y-8 px-4 py-8">
@@ -125,7 +81,7 @@
 	{/if}
 
 	<!-- Accept invite banner -->
-	{#if isInvited}
+	{#if can('accept_invite')}
 		<div class="flex items-center justify-between rounded border border-blue-200 bg-blue-50 p-4">
 			<p class="text-sm">You've been invited to this game.</p>
 			<button
@@ -155,7 +111,7 @@
 			{/each}
 		</ul>
 
-		{#if isCreator && isDraft}
+		{#if can('invite_player')}
 			<InvitePlayerForm gameId={game.id} />
 		{/if}
 	</section>
@@ -193,42 +149,44 @@
 			</ul>
 		{/if}
 
-		{#if isCreator && isDraft}
+		{#if can('edit_future_round')}
 			<AddRoundForm gameId={game.id} />
 		{/if}
 	</section>
 
 	<!-- Start game -->
-	{#if isCreator && isDraft}
+	{#if can('start_game')}
 		<section>
 			<button
 				class="w-full border px-4 py-2 font-medium disabled:opacity-50"
-				disabled={!canStart || startGame.pending > 0}
+				disabled={startGame.pending > 0}
 				onclick={handleStart}
 			>
 				{startGame.pending > 0 ? 'Starting...' : 'Start Game'}
 			</button>
-			{#if !canStart}
-				<p class="mt-1 text-xs text-neutral-400">
-					Need at least 4 active players and 1 round to start.
-				</p>
-			{/if}
 		</section>
 	{/if}
 
+	<!-- Draft hint when start isn't available yet -->
+	{#if game.state === 'draft' && !can('start_game') && can('invite_player')}
+		<p class="text-xs text-neutral-400">
+			Need at least 4 active players and 1 round to start.
+		</p>
+	{/if}
+
 	<!-- Advance round (creator only) -->
-	{#if canAdvance}
+	{#if can('transition_round') && game.activeRound}
 		<section class="rounded border border-amber-200 bg-amber-50 p-4">
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-sm font-medium">
-						Round {game.activeRound?.number} is in
-						<span class="font-semibold">{game.activeRound?.phase}</span> phase.
+						Round {game.activeRound.number} is in
+						<span class="font-semibold">{game.activeRound.phase}</span> phase.
 					</p>
 					<p class="mt-0.5 text-xs text-neutral-500">
-						{#if game.activeRound?.phase === 'submitting'}
+						{#if game.activeRound.phase === 'submitting'}
 							Advance to open voting.
-						{:else if game.activeRound?.phase === 'voting'}
+						{:else if game.activeRound.phase === 'voting'}
 							Advance to score this round.
 						{/if}
 					</p>
@@ -240,7 +198,7 @@
 				>
 					{#if advanceRound.pending > 0}
 						Advancing...
-					{:else if game.activeRound?.phase === 'submitting'}
+					{:else if game.activeRound.phase === 'submitting'}
 						Open Voting
 					{:else}
 						Score Round
@@ -251,12 +209,12 @@
 	{/if}
 
 	<!-- Submission (submitting phase only) -->
-	{#if isActive && canSubmit}
+	{#if can('submit_song') && game.activeRound}
 		<section>
 			<h2 class="mb-2 font-semibold text-lg">
-				Submit for Round {game.activeRound?.number}: {game.activeRound?.theme}
+				Submit for Round {game.activeRound.number}: {game.activeRound.theme}
 			</h2>
-			{#if game.activeRound?.submissionClosesAt}
+			{#if game.activeRound.submissionClosesAt}
 				<p class="mb-2 text-xs text-neutral-400">
 					Window closes {new Date(game.activeRound.submissionClosesAt).toLocaleDateString()}
 				</p>
@@ -276,12 +234,12 @@
 	{/if}
 
 	<!-- Voting (voting phase only) -->
-	{#if isActive && canVote && game.votingSubmissions}
+	{#if can('cast_ballot') && game.votingSubmissions && game.activeRound}
 		<section>
 			<h2 class="mb-2 font-semibold text-lg">
-				Vote on Round {game.activeRound?.number}: {game.activeRound?.theme}
+				Vote on Round {game.activeRound.number}: {game.activeRound.theme}
 			</h2>
-			{#if game.activeRound?.votingClosesAt}
+			{#if game.activeRound.votingClosesAt}
 				<p class="mb-2 text-xs text-neutral-400">
 					Voting closes {new Date(game.activeRound.votingClosesAt).toLocaleDateString()}
 				</p>
