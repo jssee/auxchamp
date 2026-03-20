@@ -4,8 +4,10 @@ import { redirect } from "@sveltejs/kit";
 import {
   acceptInviteInputSchema,
   addRoundInputSchema,
+  advanceRoundInputSchema,
   createGameInputSchema,
   invitePlayerInputSchema,
+  saveBallotInputSchema,
   saveSubmissionInputSchema,
   startGameInputSchema,
 } from "@auxchamp/api/schema";
@@ -63,4 +65,14 @@ export const saveSubmission = form(saveSubmissionInputSchema, async (input, issu
   } catch (thrown) {
     rethrowAsIssue(thrown, issue.spotifyTrackUrl("Unable to submit this track right now."));
   }
+});
+
+export const saveBallot = command(saveBallotInputSchema, async (input) => {
+  const api = createApi(getRequestEvent().request);
+  return api.saveBallot(input);
+});
+
+export const advanceRound = command(advanceRoundInputSchema, async (input) => {
+  const api = createApi(getRequestEvent().request);
+  return api.advanceRound(input);
 });
