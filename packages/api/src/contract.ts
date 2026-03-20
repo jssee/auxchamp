@@ -14,6 +14,8 @@ import {
   healthOutputSchema,
   invitePlayerInputSchema,
   invitePlayerOutputSchema,
+  saveBallotInputSchema,
+  saveBallotOutputSchema,
   saveSubmissionInputSchema,
   saveSubmissionOutputSchema,
   startGameInputSchema,
@@ -36,5 +38,6 @@ export const contract = {
   acceptInvite: oc.input(acceptInviteInputSchema).output(acceptInviteOutputSchema),
   startGame: oc.input(startGameInputSchema).output(startGameOutputSchema),
   saveSubmission: oc.input(saveSubmissionInputSchema).output(saveSubmissionOutputSchema),
+  saveBallot: oc.input(saveBallotInputSchema).output(saveBallotOutputSchema),
   getGame: oc.input(getGameInputSchema).output(getGameOutputSchema),
 };

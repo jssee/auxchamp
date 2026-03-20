@@ -1,8 +1,8 @@
 import { ORPCError } from "@orpc/server";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
-import { game, player, round, submission } from "@auxchamp/db/schema/game";
+import { ballot, game, player, round, star, submission } from "@auxchamp/db/schema/game";
 import { nanoid } from "nanoid";
 import type {
   AcceptInviteInput,
@@ -12,6 +12,8 @@ import type {
   CreateGameInput,
   CreateGameOutput,
   InvitePlayerOutput,
+  SaveBallotInput,
+  SaveBallotOutput,
   SaveSubmissionInput,
   SaveSubmissionOutput,
   StartGameInput,
@@ -326,6 +328,110 @@ export async function saveSubmission(
       gameId: input.gameId,
       spotifyTrackUrl: saved!.spotifyTrackUrl,
       note: saved!.note,
+    };
+  });
+}
+
+export async function saveBallot(
+  actorUserId: string,
+  input: SaveBallotInput,
+): Promise<SaveBallotOutput> {
+  return db.transaction(async (tx) => {
+    const [activePlayer] = await tx
+      .select({ id: player.id })
+      .from(player)
+      .where(
+        and(
+          eq(player.gameId, input.gameId),
+          eq(player.userId, actorUserId),
+          eq(player.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (!activePlayer) {
+      throw new ORPCError("FORBIDDEN", { message: "Only active players can vote." });
+    }
+
+    const [votingRound] = await tx
+      .select({
+        id: round.id,
+        votingClosesAt: round.votingClosesAt,
+      })
+      .from(round)
+      .where(and(eq(round.gameId, input.gameId), eq(round.phase, "voting")))
+      .limit(1);
+
+    if (!votingRound) {
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "No round is currently accepting votes.",
+      });
+    }
+
+    if (votingRound.votingClosesAt && votingRound.votingClosesAt < new Date()) {
+      throw new ORPCError("PRECONDITION_FAILED", { message: "The voting window has closed." });
+    }
+
+    // Validate distinctness.
+    const uniqueIds = new Set(input.submissionIds);
+    if (uniqueIds.size !== 3) {
+      throw new ORPCError("BAD_REQUEST", { message: "Must star 3 distinct submissions." });
+    }
+
+    // Validate all submissions belong to the voting round.
+    const targetSubmissions = await tx
+      .select({ id: submission.id, playerId: submission.playerId })
+      .from(submission)
+      .where(
+        and(eq(submission.roundId, votingRound.id), inArray(submission.id, input.submissionIds)),
+      );
+
+    if (targetSubmissions.length !== 3) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "All starred submissions must belong to the current voting round.",
+      });
+    }
+
+    // Validate no self-voting.
+    if (targetSubmissions.some((s) => s.playerId === activePlayer.id)) {
+      throw new ORPCError("BAD_REQUEST", { message: "Cannot star your own submission." });
+    }
+
+    // Upsert ballot: delete existing stars and replace.
+    const [existing] = await tx
+      .select({ id: ballot.id })
+      .from(ballot)
+      .where(and(eq(ballot.roundId, votingRound.id), eq(ballot.playerId, activePlayer.id)))
+      .limit(1);
+
+    let ballotId: string;
+
+    if (existing) {
+      ballotId = existing.id;
+      await tx.delete(star).where(eq(star.ballotId, ballotId));
+    } else {
+      ballotId = nanoid();
+      await tx.insert(ballot).values({
+        id: ballotId,
+        roundId: votingRound.id,
+        playerId: activePlayer.id,
+      });
+    }
+
+    await tx.insert(star).values(
+      input.submissionIds.map((submissionId) => ({
+        id: nanoid(),
+        ballotId,
+        submissionId,
+      })),
+    );
+
+    return {
+      ballotId,
+      roundId: votingRound.id,
+      playerId: activePlayer.id,
+      gameId: input.gameId,
+      submissionIds: input.submissionIds,
     };
   });
 }

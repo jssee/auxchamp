@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test";
 import * as v from "valibot";
 
-import { addRoundInputSchema, createGameInputSchema, saveSubmissionInputSchema } from "./schema";
+import {
+  addRoundInputSchema,
+  createGameInputSchema,
+  saveBallotInputSchema,
+  saveSubmissionInputSchema,
+} from "./schema";
 
 test("createGameInputSchema rejects null description", () => {
   const result = v.safeParse(createGameInputSchema, {
@@ -32,4 +37,24 @@ test("saveSubmissionInputSchema rejects null note", () => {
   });
 
   expect(result.success).toBeFalse();
+});
+
+test("saveBallotInputSchema requires exactly 3 submission IDs", () => {
+  const valid = v.safeParse(saveBallotInputSchema, {
+    gameId: "game_123",
+    submissionIds: ["s1", "s2", "s3"],
+  });
+  expect(valid.success).toBeTrue();
+
+  const tooFew = v.safeParse(saveBallotInputSchema, {
+    gameId: "game_123",
+    submissionIds: ["s1", "s2"],
+  });
+  expect(tooFew.success).toBeFalse();
+
+  const tooMany = v.safeParse(saveBallotInputSchema, {
+    gameId: "game_123",
+    submissionIds: ["s1", "s2", "s3", "s4"],
+  });
+  expect(tooMany.success).toBeFalse();
 });

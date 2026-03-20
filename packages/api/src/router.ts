@@ -8,6 +8,7 @@ import {
   addRound,
   createGame,
   invitePlayer,
+  saveBallot,
   startGame,
   saveSubmission,
 } from "./mutation";
@@ -49,6 +50,9 @@ export const appRouter = publicProcedure.router({
   }),
   saveSubmission: protectedProcedure.saveSubmission.handler(({ context, input }) => {
     return saveSubmission(context.session.user.id, input);
+  }),
+  saveBallot: protectedProcedure.saveBallot.handler(({ context, input }) => {
+    return saveBallot(context.session.user.id, input);
   }),
   getGame: protectedProcedure.getGame.handler(({ context, input }) => {
     return getGame(context.session.user.id, input.gameId);

@@ -8,9 +8,9 @@ dotenv.config({
 });
 
 const { db } = await import("@auxchamp/db");
-const { game, player, round, submission } = await import("@auxchamp/db/schema/game");
+const { game, player, round, star, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame, saveSubmission } =
+const { acceptInvite, addRound, createGame, invitePlayer, saveBallot, startGame, saveSubmission } =
   await import("./mutation");
 
 const createdGameIds = new Set<string>();
@@ -535,6 +535,127 @@ test("saveSubmission rejects when submission window has closed", async () => {
   );
 });
 
+// -- saveBallot -----------------------------------------------------------
+
+test("saveBallot creates a ballot with 3 stars during voting", async () => {
+  const { gameId, players, submissionIds } = await setupVotingRound();
+
+  // Player 0 votes for 3 submissions from other players (indices 1, 2, 3).
+  const targets = [submissionIds[1]!, submissionIds[2]!, submissionIds[3]!];
+  const result = await saveBallot(players[0]!.id, { gameId, submissionIds: targets });
+
+  expect(result).toMatchObject({
+    ballotId: expect.any(String),
+    gameId,
+    submissionIds: targets,
+  });
+
+  const stars = await db.select().from(star).where(eq(star.ballotId, result.ballotId));
+  expect(stars).toHaveLength(3);
+});
+
+test("saveBallot updates an existing ballot by replacing stars", async () => {
+  const { gameId, players, submissionIds } = await setupVotingRound();
+
+  // Player 0's submission is index 0; indices 1-3 belong to other players.
+  const first = await saveBallot(players[0]!.id, {
+    gameId,
+    submissionIds: [submissionIds[1]!, submissionIds[2]!, submissionIds[3]!],
+  });
+
+  // Re-vote with the same targets in a different order to prove replacement.
+  const second = await saveBallot(players[0]!.id, {
+    gameId,
+    submissionIds: [submissionIds[3]!, submissionIds[1]!, submissionIds[2]!],
+  });
+
+  expect(second.ballotId).toBe(first.ballotId);
+
+  const stars = await db.select().from(star).where(eq(star.ballotId, first.ballotId));
+  expect(stars).toHaveLength(3);
+});
+
+test("saveBallot rejects non-active player", async () => {
+  const { gameId, submissionIds } = await setupVotingRound();
+  const outsider = await createTestUser();
+
+  await expectOrpcError(
+    saveBallot(outsider.id, {
+      gameId,
+      submissionIds: [submissionIds[0]!, submissionIds[1]!, submissionIds[2]!],
+    }),
+    { code: "FORBIDDEN", status: 403 },
+  );
+});
+
+test("saveBallot rejects when no round is in voting phase", async () => {
+  const { gameId, players } = await setupActiveGame();
+
+  // Round is still in "submitting", not "voting".
+  await expectOrpcError(
+    saveBallot(players[0]!.id, {
+      gameId,
+      submissionIds: ["fake1", "fake2", "fake3"],
+    }),
+    { code: "PRECONDITION_FAILED", status: 412 },
+  );
+});
+
+test("saveBallot rejects self-voting", async () => {
+  const { gameId, players, submissionIds } = await setupVotingRound();
+
+  // Player 0's own submission is at index 0.
+  await expectOrpcError(
+    saveBallot(players[0]!.id, {
+      gameId,
+      submissionIds: [submissionIds[0]!, submissionIds[1]!, submissionIds[2]!],
+    }),
+    { code: "BAD_REQUEST", status: 400 },
+  );
+});
+
+test("saveBallot rejects duplicate submission IDs", async () => {
+  const { gameId, players, submissionIds } = await setupVotingRound();
+
+  await expectOrpcError(
+    saveBallot(players[0]!.id, {
+      gameId,
+      submissionIds: [submissionIds[1]!, submissionIds[1]!, submissionIds[2]!],
+    }),
+    { code: "BAD_REQUEST", status: 400 },
+  );
+});
+
+test("saveBallot rejects submissions from a different round", async () => {
+  const { gameId, players } = await setupVotingRound();
+
+  await expectOrpcError(
+    saveBallot(players[0]!.id, {
+      gameId,
+      submissionIds: ["nonexistent1", "nonexistent2", "nonexistent3"],
+    }),
+    { code: "BAD_REQUEST", status: 400 },
+  );
+});
+
+test("saveBallot rejects when voting window has closed", async () => {
+  const { gameId, players, submissionIds } = await setupVotingRound();
+
+  // Set votingClosesAt to the past.
+  await db
+    .update(round)
+    .set({ votingClosesAt: new Date("2020-01-01") })
+    .where(and(eq(round.gameId, gameId), eq(round.phase, "voting")));
+
+  await expectOrpcError(
+    saveBallot(players[0]!.id, {
+      gameId,
+      submissionIds: [submissionIds[1]!, submissionIds[2]!, submissionIds[3]!],
+    }),
+    { code: "PRECONDITION_FAILED", status: 412 },
+  );
+});
+
 // -- test helpers ---------------------------------------------------------
 
 /** Create a draft game with a lobby of accepted players. */
@@ -574,6 +695,35 @@ async function setupActiveGame() {
   const lobby = await setupLobby();
   await startGame(lobby.creator.id, { gameId: lobby.gameId });
   return lobby;
+}
+
+/**
+ * Create an active game where all players have submitted and the round
+ * has been advanced to voting. Returns player-ordered submission IDs
+ * (submissionIds[i] belongs to players[i], with index 0 being the creator).
+ */
+async function setupVotingRound() {
+  const lobby = await setupLobby();
+  await startGame(lobby.creator.id, { gameId: lobby.gameId });
+
+  const allPlayers = [lobby.creator, ...lobby.players];
+  const submissionIds: string[] = [];
+
+  for (let i = 0; i < allPlayers.length; i++) {
+    const result = await saveSubmission(allPlayers[i]!.id, {
+      gameId: lobby.gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/track${i}`,
+    });
+    submissionIds.push(result.submissionId);
+  }
+
+  // Advance round to voting.
+  await db
+    .update(round)
+    .set({ phase: "voting", votingOpensAt: new Date() })
+    .where(and(eq(round.gameId, lobby.gameId), eq(round.number, 1)));
+
+  return { ...lobby, submissionIds };
 }
 
 async function createTestUser() {
