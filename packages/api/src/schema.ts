@@ -203,6 +203,20 @@ export const getGameOutputSchema = v.nullable(
 );
 export type GetGameOutput = v.InferOutput<typeof getGameOutputSchema>;
 
+export const advanceRoundInputSchema = v.object({
+  gameId: v.string(),
+});
+export type AdvanceRoundInput = v.InferOutput<typeof advanceRoundInputSchema>;
+
+export const advanceRoundOutputSchema = v.object({
+  roundId: v.string(),
+  fromPhase: v.picklist(["submitting", "voting"]),
+  toPhase: v.picklist(["voting", "scored"]),
+  nextRoundId: v.nullable(v.string()),
+  gameCompleted: v.boolean(),
+});
+export type AdvanceRoundOutput = v.InferOutput<typeof advanceRoundOutputSchema>;
+
 export const saveBallotInputSchema = v.object({
   gameId: v.string(),
   submissionIds: v.pipe(v.array(v.string()), v.length(3, "Must star exactly 3 submissions")),

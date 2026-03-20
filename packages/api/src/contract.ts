@@ -5,6 +5,8 @@ import {
   acceptInviteOutputSchema,
   addRoundInputSchema,
   addRoundOutputSchema,
+  advanceRoundInputSchema,
+  advanceRoundOutputSchema,
   createGameInputSchema,
   createGameOutputSchema,
   getGameInputSchema,
@@ -39,5 +41,6 @@ export const contract = {
   startGame: oc.input(startGameInputSchema).output(startGameOutputSchema),
   saveSubmission: oc.input(saveSubmissionInputSchema).output(saveSubmissionOutputSchema),
   saveBallot: oc.input(saveBallotInputSchema).output(saveBallotOutputSchema),
+  advanceRound: oc.input(advanceRoundInputSchema).output(advanceRoundOutputSchema),
   getGame: oc.input(getGameInputSchema).output(getGameOutputSchema),
 };

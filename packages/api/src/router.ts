@@ -6,6 +6,7 @@ import { user } from "@auxchamp/db/schema/auth";
 import {
   acceptInvite,
   addRound,
+  advanceRound,
   createGame,
   invitePlayer,
   saveBallot,
@@ -53,6 +54,9 @@ export const appRouter = publicProcedure.router({
   }),
   saveBallot: protectedProcedure.saveBallot.handler(({ context, input }) => {
     return saveBallot(context.session.user.id, input);
+  }),
+  advanceRound: protectedProcedure.advanceRound.handler(({ context, input }) => {
+    return advanceRound(context.session.user.id, input);
   }),
   getGame: protectedProcedure.getGame.handler(({ context, input }) => {
     return getGame(context.session.user.id, input.gameId);

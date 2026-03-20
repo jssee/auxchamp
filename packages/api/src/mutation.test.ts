@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { ORPCError } from "@orpc/server";
 import dotenv from "dotenv";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 dotenv.config({
   path: new URL("../../../apps/web/.env", import.meta.url).pathname,
@@ -10,8 +10,16 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game, player, round, star, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, saveBallot, startGame, saveSubmission } =
-  await import("./mutation");
+const {
+  acceptInvite,
+  addRound,
+  advanceRound,
+  createGame,
+  invitePlayer,
+  saveBallot,
+  startGame,
+  saveSubmission,
+} = await import("./mutation");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -654,6 +662,163 @@ test("saveBallot rejects when voting window has closed", async () => {
     }),
     { code: "PRECONDITION_FAILED", status: 412 },
   );
+});
+
+// -- advanceRound ---------------------------------------------------------
+
+test("advanceRound transitions submitting to voting", async () => {
+  const { gameId, creator } = await setupActiveGame();
+
+  const result = await advanceRound(creator.id, { gameId });
+
+  expect(result).toMatchObject({
+    fromPhase: "submitting",
+    toPhase: "voting",
+    nextRoundId: null,
+    gameCompleted: false,
+  });
+
+  const [advanced] = await db
+    .select()
+    .from(round)
+    .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+
+  expect(advanced).toMatchObject({ phase: "voting" });
+  expect(advanced!.votingOpensAt).toBeInstanceOf(Date);
+  expect(advanced!.votingClosesAt).toBeInstanceOf(Date);
+});
+
+test("advanceRound transitions voting to scored and opens next round", async () => {
+  const { gameId, creator, players } = await setupLobby({ rounds: 2 });
+  await startGame(creator.id, { gameId });
+
+  // Submit and advance to voting, then to scored.
+  for (const p of [creator, ...players]) {
+    await saveSubmission(p.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/${p.id}`,
+    });
+  }
+  await advanceRound(creator.id, { gameId }); // submitting → voting
+
+  // Cast ballots (each player votes for 3 others' submissions).
+  const allPlayers = [creator, ...players];
+  const submissions = await db
+    .select({ id: submission.id, playerId: submission.playerId })
+    .from(submission)
+    .where(
+      eq(
+        submission.roundId,
+        (
+          await db
+            .select({ id: round.id })
+            .from(round)
+            .where(and(eq(round.gameId, gameId), eq(round.number, 1)))
+        )[0]!.id,
+      ),
+    );
+
+  for (const voter of allPlayers) {
+    const [voterPlayer] = await db
+      .select({ id: player.id })
+      .from(player)
+      .where(and(eq(player.gameId, gameId), eq(player.userId, voter.id)));
+    const targets = submissions
+      .filter((s) => s.playerId !== voterPlayer!.id)
+      .slice(0, 3)
+      .map((s) => s.id);
+    await saveBallot(voter.id, { gameId, submissionIds: targets });
+  }
+
+  const result = await advanceRound(creator.id, { gameId }); // voting → scored
+
+  expect(result).toMatchObject({
+    fromPhase: "voting",
+    toPhase: "scored",
+    gameCompleted: false,
+  });
+  expect(result.nextRoundId).toBeTypeOf("string");
+
+  // Round 1 is scored, round 2 is submitting.
+  const rounds = await db
+    .select({ number: round.number, phase: round.phase })
+    .from(round)
+    .where(eq(round.gameId, gameId))
+    .orderBy(asc(round.number));
+
+  expect(rounds).toMatchObject([
+    { number: 1, phase: "scored" },
+    { number: 2, phase: "submitting" },
+  ]);
+});
+
+test("advanceRound completes the game when no more rounds remain", async () => {
+  const { gameId, creator, players } = await setupLobby({ rounds: 1 });
+  await startGame(creator.id, { gameId });
+
+  // Submit, advance to voting.
+  for (const p of [creator, ...players]) {
+    await saveSubmission(p.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/${p.id}`,
+    });
+  }
+  await advanceRound(creator.id, { gameId });
+
+  // Cast ballots.
+  const allPlayers = [creator, ...players];
+  const [r1] = await db
+    .select({ id: round.id })
+    .from(round)
+    .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+  const submissions = await db
+    .select({ id: submission.id, playerId: submission.playerId })
+    .from(submission)
+    .where(eq(submission.roundId, r1!.id));
+
+  for (const voter of allPlayers) {
+    const [voterPlayer] = await db
+      .select({ id: player.id })
+      .from(player)
+      .where(and(eq(player.gameId, gameId), eq(player.userId, voter.id)));
+    const targets = submissions
+      .filter((s) => s.playerId !== voterPlayer!.id)
+      .slice(0, 3)
+      .map((s) => s.id);
+    await saveBallot(voter.id, { gameId, submissionIds: targets });
+  }
+
+  const result = await advanceRound(creator.id, { gameId }); // voting → scored
+
+  expect(result).toMatchObject({
+    fromPhase: "voting",
+    toPhase: "scored",
+    nextRoundId: null,
+    gameCompleted: true,
+  });
+
+  const [completedGame] = await db.select().from(game).where(eq(game.id, gameId));
+  expect(completedGame).toMatchObject({ state: "completed" });
+  expect(completedGame!.completedAt).toBeInstanceOf(Date);
+});
+
+test("advanceRound rejects non-creator", async () => {
+  const { gameId, players } = await setupActiveGame();
+
+  await expectOrpcError(advanceRound(players[0]!.id, { gameId }), {
+    code: "FORBIDDEN",
+    status: 403,
+  });
+});
+
+test("advanceRound rejects when no advanceable round exists", async () => {
+  const { gameId, creator } = await setupLobby();
+
+  // Game is still draft, no submitting/voting round exists.
+  await expectOrpcError(advanceRound(creator.id, { gameId }), {
+    code: "PRECONDITION_FAILED",
+    status: 412,
+  });
 });
 
 // -- test helpers ---------------------------------------------------------
