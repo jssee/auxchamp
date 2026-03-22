@@ -150,20 +150,6 @@ const roundSchema = v.object({
 
 type Round = v.InferOutput<typeof roundSchema>;
 
-const activeRoundSchema = v.object({
-  id: v.string(),
-  number: v.number(),
-  theme: v.string(),
-  description: v.nullable(v.string()),
-  phase: v.picklist(roundPhaseValues),
-  submissionOpensAt: v.nullable(v.date()),
-  submissionClosesAt: v.nullable(v.date()),
-  votingOpensAt: v.nullable(v.date()),
-  votingClosesAt: v.nullable(v.date()),
-});
-
-type ActiveRound = v.InferOutput<typeof activeRoundSchema>;
-
 const actorPlayerSchema = v.object({
   id: v.string(),
   role: v.picklist(playerRoleValues),
@@ -269,11 +255,7 @@ export const getGameOutputSchema = v.nullable(
     createdAt: v.date(),
     players: v.array(playerSchema),
     rounds: v.array(roundSchema),
-    activeRound: v.nullable(activeRoundSchema),
     actorPlayer: actorPlayerSchema,
-    actorSubmission: v.nullable(actorSubmissionSchema),
-    actorBallot: v.nullable(actorBallotSchema),
-    votingSubmissions: v.nullable(v.array(votingSubmissionSchema)),
     roundResults: v.array(roundResultSchema),
     standings: v.array(standingSchema),
     actions: v.array(v.picklist(actionValues)),
@@ -311,7 +293,6 @@ export const saveBallotOutputSchema = v.object({
 export type SaveBallotOutput = v.InferOutput<typeof saveBallotOutputSchema>;
 
 export type {
-  ActiveRound,
   ActorBallot,
   ActorPlayer,
   ActorSubmission,

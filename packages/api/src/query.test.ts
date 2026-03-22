@@ -117,7 +117,7 @@ test("returns game metadata, players, and rounds for a draft game", async () => 
   expect(detail!.rounds[1]).toMatchObject({ number: 2, theme: "Deep cuts", submissionCount: 0 });
 });
 
-test("returns activeRound and actorSubmission for an active game", async () => {
+test("returns submission count for an active game round", async () => {
   const { gameId, players } = await setupActiveGame();
 
   await saveSubmission(players[0]!.id, {
@@ -127,27 +127,7 @@ test("returns activeRound and actorSubmission for an active game", async () => {
   });
 
   const detail = await getGame(players[0]!.id, gameId);
-
-  expect(detail!.activeRound).toMatchObject({
-    number: 1,
-    phase: "submitting",
-  });
-  expect(detail!.actorSubmission).toMatchObject({
-    spotifyTrackUrl: "https://open.spotify.com/track/abc",
-    note: "My pick",
-  });
-
-  // Submission count for round 1 should reflect the one submission
   expect(detail!.rounds[0]!.submissionCount).toBe(1);
-});
-
-test("returns null actorSubmission when the actor has not submitted", async () => {
-  const { gameId, players } = await setupActiveGame();
-
-  const detail = await getGame(players[0]!.id, gameId);
-
-  expect(detail!.activeRound).not.toBeNull();
-  expect(detail!.actorSubmission).toBeNull();
 });
 
 test("returns actorPlayer reflecting the actor's participation", async () => {
@@ -173,45 +153,6 @@ test("returns null for a non-member", async () => {
   expect(detail).toBeNull();
 });
 
-test("returns voting state with actorBallot and votingSubmissions", async () => {
-  const { gameId, creator, players } = await setupActiveGame();
-
-  // All players submit.
-  const allPlayers = [creator, ...players];
-  for (let i = 0; i < allPlayers.length; i++) {
-    await saveSubmission(allPlayers[i]!.id, {
-      gameId,
-      spotifyTrackUrl: `https://open.spotify.com/track/t${i}`,
-    });
-  }
-
-  // Advance to voting.
-  await advanceRound(creator.id, { gameId });
-
-  // Player 0 has not voted yet.
-  const beforeVote = await getGame(players[0]!.id, gameId);
-  expect(beforeVote!.activeRound).toMatchObject({ phase: "voting" });
-  expect(beforeVote!.activeRound!.votingOpensAt).toBeInstanceOf(Date);
-  expect(beforeVote!.votingSubmissions).toHaveLength(allPlayers.length);
-  expect(beforeVote!.actorBallot).toBeNull();
-  expect(beforeVote!.actorSubmission).toBeNull(); // Not in submitting phase.
-
-  // Player 0 votes.
-  const subs = beforeVote!.votingSubmissions!;
-  const voterPlayerId = beforeVote!.actorPlayer.id;
-  const targets = subs.filter((s) => s.playerId !== voterPlayerId).slice(0, 3);
-  await saveBallot(players[0]!.id, {
-    gameId,
-    submissionIds: targets.map((t) => t.id),
-  });
-
-  const afterVote = await getGame(players[0]!.id, gameId);
-  expect(afterVote!.actorBallot).toMatchObject({
-    ballotId: expect.any(String),
-    submissionIds: expect.arrayContaining(targets.map((t) => t.id)),
-  });
-});
-
 test("returns roundResults and standings after scoring", async () => {
   const { gameId, creator, players } = await setupActiveGame();
 
@@ -225,14 +166,14 @@ test("returns roundResults and standings after scoring", async () => {
 
   await advanceRound(creator.id, { gameId }); // submitting → voting
 
-  // All players vote.
-  const gameDetail = await getGame(creator.id, gameId);
-  const subs = gameDetail!.votingSubmissions!;
+  // All players vote (use getRound to get voting submissions).
+  const preScoreDetail = await getGame(creator.id, gameId);
+  const roundId = preScoreDetail!.rounds[0]!.id;
 
   for (const voter of allPlayers) {
-    const voterDetail = await getGame(voter.id, gameId);
-    const voterPlayerId = voterDetail!.actorPlayer.id;
-    const targets = subs.filter((s) => s.playerId !== voterPlayerId).slice(0, 3);
+    const roundDetail = await getRound(voter.id, gameId, roundId);
+    const subs = roundDetail!.votingSubmissions!;
+    const targets = subs.filter((s) => s.playerId !== roundDetail!.actorPlayer.id).slice(0, 3);
     await saveBallot(voter.id, {
       gameId,
       submissionIds: targets.map((t) => t.id),
@@ -380,14 +321,14 @@ test("getRound returns results for a scored round", async () => {
 
   await advanceRound(creator.id, { gameId }); // submitting → voting
 
-  // All players vote.
+  // All players vote (use getRound for voting submissions).
   const gameDetail = await getGame(creator.id, gameId);
-  const subs = gameDetail!.votingSubmissions!;
+  const roundId = gameDetail!.rounds[0]!.id;
 
   for (const voter of allPlayers) {
-    const voterDetail = await getGame(voter.id, gameId);
-    const voterPlayerId = voterDetail!.actorPlayer.id;
-    const targets = subs.filter((s) => s.playerId !== voterPlayerId).slice(0, 3);
+    const roundDetail = await getRound(voter.id, gameId, roundId);
+    const subs = roundDetail!.votingSubmissions!;
+    const targets = subs.filter((s) => s.playerId !== roundDetail!.actorPlayer.id).slice(0, 3);
     await saveBallot(voter.id, {
       gameId,
       submissionIds: targets.map((t) => t.id),
@@ -395,8 +336,6 @@ test("getRound returns results for a scored round", async () => {
   }
 
   await advanceRound(creator.id, { gameId }); // voting → scored
-
-  const roundId = gameDetail!.rounds[0]!.id;
   const scored = await getRound(creator.id, gameId, roundId);
 
   expect(scored!.phase).toBe("scored");

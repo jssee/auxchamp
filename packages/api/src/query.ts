@@ -84,62 +84,9 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
           ).map((entry) => [entry.roundId, entry.submissionCount]),
         );
 
+  // Active round is needed for capability context but not returned.
   const activeRound =
     row.rounds.find((r) => r.phase === "submitting" || r.phase === "voting") ?? null;
-
-  const actorSubmission =
-    activeRound === null || activeRound.phase !== "submitting"
-      ? null
-      : await db.query.submission.findFirst({
-          where: and(
-            eq(submission.roundId, activeRound.id),
-            eq(submission.playerId, actorPlayer.id),
-          ),
-          columns: {
-            id: true,
-            spotifyTrackUrl: true,
-            note: true,
-            submittedAt: true,
-          },
-        });
-
-  // Voting-phase data: actor's ballot and the submissions to vote on.
-  let actorBallot: { ballotId: string; submissionIds: string[] } | null = null;
-  let votingSubmissions:
-    | {
-        id: string;
-        playerId: string;
-        spotifyTrackUrl: string;
-        note: string | null;
-      }[]
-    | null = null;
-
-  if (activeRound?.phase === "voting") {
-    const actorBallotRow = await db.query.ballot.findFirst({
-      where: and(eq(ballot.roundId, activeRound.id), eq(ballot.playerId, actorPlayer.id)),
-      columns: { id: true },
-      with: {
-        stars: { columns: { submissionId: true } },
-      },
-    });
-
-    if (actorBallotRow) {
-      actorBallot = {
-        ballotId: actorBallotRow.id,
-        submissionIds: actorBallotRow.stars.map((s) => s.submissionId),
-      };
-    }
-
-    votingSubmissions = await db
-      .select({
-        id: submission.id,
-        playerId: submission.playerId,
-        spotifyTrackUrl: submission.spotifyTrackUrl,
-        note: submission.note,
-      })
-      .from(submission)
-      .where(eq(submission.roundId, activeRound.id));
-  }
 
   // Round results and standings for scored rounds.
   const scoredRounds = row.rounds.filter((r) => r.phase === "scored");
@@ -244,37 +191,12 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
       submissionCount: submissionCountByRoundId.get(round.id) ?? 0,
     })),
 
-    activeRound: activeRound
-      ? {
-          id: activeRound.id,
-          number: activeRound.number,
-          theme: activeRound.theme,
-          description: activeRound.description,
-          phase: activeRound.phase,
-          submissionOpensAt: activeRound.submissionOpensAt,
-          submissionClosesAt: activeRound.submissionClosesAt,
-          votingOpensAt: activeRound.votingOpensAt,
-          votingClosesAt: activeRound.votingClosesAt,
-        }
-      : null,
-
     actorPlayer: {
       id: actorPlayer.id,
       role: actorPlayer.role,
       status: actorPlayer.status,
     },
 
-    actorSubmission: actorSubmission
-      ? {
-          id: actorSubmission.id,
-          spotifyTrackUrl: actorSubmission.spotifyTrackUrl,
-          note: actorSubmission.note,
-          submittedAt: actorSubmission.submittedAt,
-        }
-      : null,
-
-    actorBallot,
-    votingSubmissions,
     roundResults,
     standings,
     actions,
