@@ -1,4 +1,4 @@
-import { command, form, getRequestEvent } from "$app/server";
+import { form, getRequestEvent } from "$app/server";
 import { redirect } from "@sveltejs/kit";
 
 import {
@@ -47,14 +47,24 @@ export const invitePlayer = form(invitePlayerInputSchema, async (input, issue) =
   }
 });
 
-export const acceptInvite = command(acceptInviteInputSchema, async (input) => {
+export const acceptInvite = form(acceptInviteInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
-  return api.acceptInvite(input);
+
+  try {
+    return await api.acceptInvite(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.gameId("Unable to accept invite."));
+  }
 });
 
-export const startGame = command(startGameInputSchema, async (input) => {
+export const startGame = form(startGameInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
-  return api.startGame(input);
+
+  try {
+    return await api.startGame(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.gameId("Unable to start game."));
+  }
 });
 
 export const saveSubmission = form(saveSubmissionInputSchema, async (input, issue) => {
@@ -67,12 +77,22 @@ export const saveSubmission = form(saveSubmissionInputSchema, async (input, issu
   }
 });
 
-export const saveBallot = command(saveBallotInputSchema, async (input) => {
+export const saveBallot = form(saveBallotInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
-  return api.saveBallot(input);
+
+  try {
+    return await api.saveBallot(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.submissionIds("Unable to save ballot."));
+  }
 });
 
-export const advanceRound = command(advanceRoundInputSchema, async (input) => {
+export const advanceRound = form(advanceRoundInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
-  return api.advanceRound(input);
+
+  try {
+    return await api.advanceRound(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.gameId("Unable to advance round."));
+  }
 });

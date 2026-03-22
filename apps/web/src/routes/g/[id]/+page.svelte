@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import { acceptInvite, advanceRound, saveBallot, startGame } from '$lib/game.remote';
 
+	import { Button } from '$lib/components/ui/button';
+	import * as Field from '$lib/components/ui/field';
 	import AddRoundForm from './AddRoundForm.svelte';
 	import InvitePlayerForm from './InvitePlayerForm.svelte';
 	import SubmissionForm from './SubmissionForm.svelte';
@@ -29,18 +30,6 @@
 		}
 	});
 
-	let error = $state('');
-
-	async function run(fn: () => Promise<unknown>) {
-		error = '';
-		try {
-			await fn();
-			await invalidateAll();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong.';
-		}
-	}
-
 	function toggleStar(submissionId: string) {
 		const next = new Set(selectedSubmissions);
 		if (next.has(submissionId)) {
@@ -50,11 +39,6 @@
 		}
 		selectedSubmissions = next;
 	}
-
-	const handleAccept = () => run(() => acceptInvite({ gameId: game.id }));
-	const handleStart = () => run(() => startGame({ gameId: game.id }));
-	const handleAdvanceRound = () => run(() => advanceRound({ gameId: game.id }));
-	const handleSaveBallot = () => run(() => saveBallot({ gameId: game.id, submissionIds: [...selectedSubmissions] }));
 </script>
 
 <div class="container mx-auto max-w-2xl space-y-8 px-4 py-8">
@@ -76,22 +60,18 @@
 		{/if}
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500" role="alert">{error}</p>
-	{/if}
-
 	<!-- Accept invite banner -->
 	{#if can('accept_invite')}
-		<div class="flex items-center justify-between rounded border border-blue-200 bg-blue-50 p-4">
-			<p class="text-sm">You've been invited to this game.</p>
-			<button
-				class="border px-3 py-1 text-sm font-medium"
-				disabled={acceptInvite.pending > 0}
-				onclick={handleAccept}
-			>
-				{acceptInvite.pending > 0 ? 'Accepting...' : 'Accept Invite'}
-			</button>
-		</div>
+		<form class="rounded border border-blue-200 bg-blue-50 p-4" {...acceptInvite}>
+			<input {...acceptInvite.fields.gameId.as('hidden', game.id)} />
+			<div class="flex items-center justify-between">
+				<p class="text-sm">You've been invited to this game.</p>
+				<Button type="submit" size="sm" disabled={acceptInvite.pending > 0}>
+					{acceptInvite.pending > 0 ? 'Accepting...' : 'Accept Invite'}
+				</Button>
+			</div>
+			<Field.Error errors={acceptInvite.fields.gameId.issues()} />
+		</form>
 	{/if}
 
 	<!-- Players -->
@@ -156,15 +136,13 @@
 
 	<!-- Start game -->
 	{#if can('start_game')}
-		<section>
-			<button
-				class="w-full border px-4 py-2 font-medium disabled:opacity-50"
-				disabled={startGame.pending > 0}
-				onclick={handleStart}
-			>
+		<form {...startGame}>
+			<input {...startGame.fields.gameId.as('hidden', game.id)} />
+			<Button type="submit" class="w-full" disabled={startGame.pending > 0}>
 				{startGame.pending > 0 ? 'Starting...' : 'Start Game'}
-			</button>
-		</section>
+			</Button>
+			<Field.Error errors={startGame.fields.gameId.issues()} />
+		</form>
 	{/if}
 
 	<!-- Draft hint when start isn't available yet -->
@@ -176,7 +154,8 @@
 
 	<!-- Advance round (creator only) -->
 	{#if can('transition_round') && game.activeRound}
-		<section class="rounded border border-amber-200 bg-amber-50 p-4">
+		<form class="rounded border border-amber-200 bg-amber-50 p-4" {...advanceRound}>
+			<input {...advanceRound.fields.gameId.as('hidden', game.id)} />
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-sm font-medium">
@@ -191,11 +170,7 @@
 						{/if}
 					</p>
 				</div>
-				<button
-					class="border border-amber-300 bg-white px-3 py-1 text-sm font-medium disabled:opacity-50"
-					disabled={advanceRound.pending > 0}
-					onclick={handleAdvanceRound}
-				>
+				<Button type="submit" size="sm" variant="outline" disabled={advanceRound.pending > 0}>
 					{#if advanceRound.pending > 0}
 						Advancing...
 					{:else if game.activeRound.phase === 'submitting'}
@@ -203,9 +178,10 @@
 					{:else}
 						Score Round
 					{/if}
-				</button>
+				</Button>
 			</div>
-		</section>
+			<Field.Error errors={advanceRound.fields.gameId.issues()} />
+		</form>
 	{/if}
 
 	<!-- Submission (submitting phase only) -->
@@ -235,7 +211,12 @@
 
 	<!-- Voting (voting phase only) -->
 	{#if can('cast_ballot') && game.votingSubmissions && game.activeRound}
-		<section>
+		<form {...saveBallot}>
+			<input {...saveBallot.fields.gameId.as('hidden', game.id)} />
+			{#each [...selectedSubmissions] as id}
+				<input type="hidden" name="submissionIds" value={id} />
+			{/each}
+
 			<h2 class="mb-2 font-semibold text-lg">
 				Vote on Round {game.activeRound.number}: {game.activeRound.theme}
 			</h2>
@@ -254,6 +235,7 @@
 					{@const isSelected = selectedSubmissions.has(vs.id)}
 					<li>
 						<button
+							type="button"
 							class="w-full rounded border px-4 py-3 text-left text-sm transition-colors
 								{isSelected ? 'border-purple-400 bg-purple-50' : 'border-neutral-200 hover:border-neutral-300'}"
 							onclick={() => toggleStar(vs.id)}
@@ -276,10 +258,12 @@
 				{/each}
 			</ul>
 
-			<button
-				class="mt-4 w-full border px-4 py-2 font-medium disabled:opacity-50"
+			<Field.Error errors={saveBallot.fields.submissionIds.issues()} />
+
+			<Button
+				type="submit"
+				class="mt-4 w-full"
 				disabled={selectedSubmissions.size !== 3 || saveBallot.pending > 0}
-				onclick={handleSaveBallot}
 			>
 				{#if saveBallot.pending > 0}
 					Saving...
@@ -288,12 +272,12 @@
 				{:else}
 					Submit Ballot
 				{/if}
-			</button>
+			</Button>
 
 			{#if game.actorBallot}
 				<p class="mt-2 text-xs text-green-600">&#10003; Your ballot has been recorded.</p>
 			{/if}
-		</section>
+		</form>
 	{/if}
 
 	<!-- Round results -->
