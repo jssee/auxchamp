@@ -14,7 +14,7 @@ import {
   saveSubmission,
 } from "./mutation";
 import { protectedProcedure, publicProcedure } from "./procedure";
-import { getGame, getPublicProfile } from "./query";
+import { getGame, getPublicProfile, getRound } from "./query";
 
 export const appRouter = publicProcedure.router({
   health: publicProcedure.health.handler(() => "OK"),
@@ -60,6 +60,9 @@ export const appRouter = publicProcedure.router({
   }),
   getGame: protectedProcedure.getGame.handler(({ context, input }) => {
     return getGame(context.session.user.id, input.gameId);
+  }),
+  getRound: protectedProcedure.getRound.handler(({ context, input }) => {
+    return getRound(context.session.user.id, input.gameId, input.roundId);
   }),
 });
 

@@ -219,6 +219,38 @@ const standingSchema = v.object({
 
 type Standing = v.InferOutput<typeof standingSchema>;
 
+export const getRoundInputSchema = v.object({
+  gameId: v.string(),
+  roundId: v.string(),
+});
+export type GetRoundInput = v.InferOutput<typeof getRoundInputSchema>;
+
+export const getRoundOutputSchema = v.nullable(
+  v.object({
+    id: v.string(),
+    number: v.number(),
+    theme: v.string(),
+    description: v.nullable(v.string()),
+    phase: v.picklist(roundPhaseValues),
+    submissionOpensAt: v.nullable(v.date()),
+    submissionClosesAt: v.nullable(v.date()),
+    votingOpensAt: v.nullable(v.date()),
+    votingClosesAt: v.nullable(v.date()),
+
+    actorPlayer: actorPlayerSchema,
+    actorSubmission: v.nullable(actorSubmissionSchema),
+    actorBallot: v.nullable(actorBallotSchema),
+    votingSubmissions: v.nullable(v.array(votingSubmissionSchema)),
+    results: v.nullable(
+      v.object({
+        submissions: v.array(roundResultSubmissionSchema),
+      }),
+    ),
+    actions: v.array(v.picklist(actionValues)),
+  }),
+);
+export type GetRoundOutput = v.InferOutput<typeof getRoundOutputSchema>;
+
 export const getGameInputSchema = v.object({
   gameId: v.string(),
 });
