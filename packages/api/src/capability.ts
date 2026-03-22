@@ -33,50 +33,49 @@ export type CapabilityContext = {
   now: Date;
 };
 
+function windowOpen(closesAt: Date | null, now: Date) {
+  return !closesAt || closesAt > now;
+}
+
+/** Each action paired with the predicate that enables it. */
+const rules: [Action, (ctx: CapabilityContext) => boolean][] = [
+  ["accept_invite", (ctx) => ctx.actorStatus === "invited"],
+  ["edit_game", (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator"],
+  ["edit_future_round", (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator"],
+  ["invite_player", (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator"],
+  [
+    "start_game",
+    (ctx) =>
+      ctx.gameState === "draft" &&
+      ctx.actorRole === "creator" &&
+      ctx.roundCount >= 1 &&
+      ctx.activePlayerCount >= 4,
+  ],
+  ["leave_game", (ctx) => ctx.gameState === "active" && ctx.actorStatus === "active"],
+  [
+    "submit_song",
+    (ctx) =>
+      ctx.gameState === "active" &&
+      ctx.actorStatus === "active" &&
+      ctx.activeRoundPhase === "submitting" &&
+      windowOpen(ctx.submissionClosesAt, ctx.now),
+  ],
+  [
+    "cast_ballot",
+    (ctx) =>
+      ctx.gameState === "active" &&
+      ctx.actorStatus === "active" &&
+      ctx.activeRoundPhase === "voting" &&
+      windowOpen(ctx.votingClosesAt, ctx.now),
+  ],
+  [
+    "transition_round",
+    (ctx) =>
+      ctx.gameState === "active" && ctx.actorRole === "creator" && ctx.activeRoundPhase !== null,
+  ],
+];
+
 export function getAllowedActions(ctx: CapabilityContext): ReadonlySet<Action> {
-  const actions = new Set<Action>();
-
-  if (!ctx.actorRole || !ctx.actorStatus) return actions;
-
-  const isCreator = ctx.actorRole === "creator";
-  const isActivePlayer = ctx.actorStatus === "active";
-  const isDraft = ctx.gameState === "draft";
-  const isGameActive = ctx.gameState === "active";
-
-  if (ctx.actorStatus === "invited") {
-    actions.add("accept_invite");
-    return actions;
-  }
-
-  if (isDraft && isCreator) {
-    actions.add("edit_game");
-    actions.add("edit_future_round");
-    actions.add("invite_player");
-
-    if (ctx.roundCount >= 1 && ctx.activePlayerCount >= 4) {
-      actions.add("start_game");
-    }
-  }
-
-  if (isGameActive && isActivePlayer) {
-    actions.add("leave_game");
-
-    if (ctx.activeRoundPhase === "submitting") {
-      if (!ctx.submissionClosesAt || ctx.submissionClosesAt > ctx.now) {
-        actions.add("submit_song");
-      }
-    }
-
-    if (ctx.activeRoundPhase === "voting") {
-      if (!ctx.votingClosesAt || ctx.votingClosesAt > ctx.now) {
-        actions.add("cast_ballot");
-      }
-    }
-  }
-
-  if (isGameActive && isCreator && ctx.activeRoundPhase !== null) {
-    actions.add("transition_round");
-  }
-
-  return actions;
+  if (!ctx.actorRole || !ctx.actorStatus) return new Set();
+  return new Set(rules.filter(([, pred]) => pred(ctx)).map(([action]) => action));
 }
