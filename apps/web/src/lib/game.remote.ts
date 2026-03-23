@@ -61,7 +61,8 @@ export const startGame = form(startGameInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
 
   try {
-    return await api.startGame(input);
+    const result = await api.startGame(input);
+    redirect(303, `/g/${result.gameId}/r/${result.openRoundId}`);
   } catch (thrown) {
     rethrowAsIssue(thrown, issue.gameId("Unable to start game."));
   }

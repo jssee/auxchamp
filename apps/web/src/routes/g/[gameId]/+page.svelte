@@ -2,8 +2,13 @@
 	const { data } = $props();
 	let game = $derived(data.game);
 
+	let can = $derived((action: (typeof game.actions)[number]) => game.actions.includes(action));
 	let playerNameById = $derived(new Map(game.players.map((p) => [p.id, p.userName])));
 </script>
+
+{#if can('edit_game')}
+	<a href="/g/{game.id}/edit" class="text-sm text-neutral-500 hover:underline">Edit game →</a>
+{/if}
 
 <!-- Players -->
 <section>
