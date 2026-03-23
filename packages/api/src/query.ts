@@ -4,9 +4,36 @@ import { normalizeUsername } from "@auxchamp/auth/utils";
 import { db } from "@auxchamp/db";
 import { user } from "@auxchamp/db/schema/auth";
 import { ballot, game, round, star, submission } from "@auxchamp/db/schema/game";
-import type { Action } from "./capability";
+import type { CapabilityContext } from "./capability";
 import { getAllowedActions } from "./capability";
-import type { GetGameOutput, GetPublicProfileOutput, GetRoundOutput } from "./schema";
+import type {
+  GetGameOutput,
+  GetPublicProfileOutput,
+  GetRoundOutput,
+  RoundResult,
+  Standing,
+} from "./schema";
+
+/** Submissions with star counts for one or more rounds. */
+function submissionsWithStarCounts(roundIds: string[]) {
+  return db
+    .select({
+      submissionId: submission.id,
+      roundId: submission.roundId,
+      playerId: submission.playerId,
+      spotifyTrackUrl: submission.spotifyTrackUrl,
+      starCount: sql<number>`cast(count(${star.id}) as int)`,
+    })
+    .from(submission)
+    .leftJoin(star, eq(star.submissionId, submission.id))
+    .where(inArray(submission.roundId, roundIds))
+    .groupBy(submission.id, submission.roundId, submission.playerId, submission.spotifyTrackUrl);
+}
+
+/** Build capability context and return allowed actions. */
+function computeActions(ctx: Omit<CapabilityContext, "now">) {
+  return getAllowedActions({ ...ctx, now: new Date() });
+}
 
 export async function getPublicProfile(username: string): Promise<GetPublicProfileOutput> {
   const profile = await db.query.user.findFirst({
@@ -90,36 +117,12 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
 
   // Round results and standings for scored rounds.
   const scoredRounds = row.rounds.filter((r) => r.phase === "scored");
-  let roundResults: {
-    roundId: string;
-    roundNumber: number;
-    submissions: {
-      submissionId: string;
-      playerId: string;
-      spotifyTrackUrl: string;
-      starCount: number;
-    }[];
-  }[] = [];
-  let standings: { playerId: string; totalStars: number }[] = [];
+  let roundResults: RoundResult[] = [];
+  let standings: Standing[] = [];
 
   if (scoredRounds.length > 0) {
-    const scoredRoundIds = scoredRounds.map((r) => r.id);
-
-    const submissionsWithStars = await db
-      .select({
-        submissionId: submission.id,
-        roundId: submission.roundId,
-        playerId: submission.playerId,
-        spotifyTrackUrl: submission.spotifyTrackUrl,
-        starCount: sql<number>`cast(count(${star.id}) as int)`,
-      })
-      .from(submission)
-      .leftJoin(star, eq(star.submissionId, submission.id))
-      .where(inArray(submission.roundId, scoredRoundIds))
-      .groupBy(submission.id, submission.roundId, submission.playerId, submission.spotifyTrackUrl);
-
-    // Group by round for per-round results.
-    const byRound = Map.groupBy(submissionsWithStars, (s) => s.roundId);
+    const rows = await submissionsWithStarCounts(scoredRounds.map((r) => r.id));
+    const byRound = Map.groupBy(rows, (s) => s.roundId);
 
     roundResults = scoredRounds.map((sr) => ({
       roundId: sr.id,
@@ -136,7 +139,7 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
 
     // Derive cumulative standings from the same data (no extra query).
     const starsByPlayer = new Map<string, number>();
-    for (const s of submissionsWithStars) {
+    for (const s of rows) {
       starsByPlayer.set(s.playerId, (starsByPlayer.get(s.playerId) ?? 0) + s.starCount);
     }
     standings = [...starsByPlayer.entries()]
@@ -144,21 +147,16 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
       .sort((a, b) => b.totalStars - a.totalStars);
   }
 
-  // activeRound is found by phase === "submitting" | "voting", so its phase
-  // is already narrowed. Cast satisfies CapabilityContext's union type.
-  const actions: Action[] = [
-    ...getAllowedActions({
-      gameState: row.state,
-      activeRoundPhase: (activeRound?.phase as "submitting" | "voting") ?? null,
-      actorRole: actorPlayer.role,
-      actorStatus: actorPlayer.status,
-      activePlayerCount: row.players.filter((p) => p.status === "active").length,
-      roundCount: row.rounds.length,
-      submissionClosesAt: activeRound?.submissionClosesAt ?? null,
-      votingClosesAt: activeRound?.votingClosesAt ?? null,
-      now: new Date(),
-    }),
-  ];
+  const actions = computeActions({
+    gameState: row.state,
+    activeRoundPhase: (activeRound?.phase as "submitting" | "voting") ?? null,
+    actorRole: actorPlayer.role,
+    actorStatus: actorPlayer.status,
+    activePlayerCount: row.players.filter((p) => p.status === "active").length,
+    roundCount: row.rounds.length,
+    submissionClosesAt: activeRound?.submissionClosesAt ?? null,
+    votingClosesAt: activeRound?.votingClosesAt ?? null,
+  });
 
   return {
     id: row.id,
@@ -286,20 +284,10 @@ export async function getRound(
   }
 
   if (roundRow.phase === "scored") {
-    const submissionsWithStars = await db
-      .select({
-        submissionId: submission.id,
-        playerId: submission.playerId,
-        spotifyTrackUrl: submission.spotifyTrackUrl,
-        starCount: sql<number>`cast(count(${star.id}) as int)`,
-      })
-      .from(submission)
-      .leftJoin(star, eq(star.submissionId, submission.id))
-      .where(eq(submission.roundId, roundId))
-      .groupBy(submission.id, submission.playerId, submission.spotifyTrackUrl);
+    const rows = await submissionsWithStarCounts([roundId]);
 
     results = {
-      submissions: submissionsWithStars
+      submissions: rows
         .map((s) => ({
           submissionId: s.submissionId,
           playerId: s.playerId,
@@ -310,24 +298,20 @@ export async function getRound(
     };
   }
 
-  // Compute actions scoped to this round's phase.
   // Only active rounds (submitting/voting) produce round-relevant actions.
   const activeRoundPhase =
     roundRow.phase === "submitting" || roundRow.phase === "voting" ? roundRow.phase : null;
 
-  const actions: Action[] = [
-    ...getAllowedActions({
-      gameState: gameRow.state,
-      activeRoundPhase,
-      actorRole: actorPlayer.role,
-      actorStatus: actorPlayer.status,
-      activePlayerCount: gameRow.players.filter((p) => p.status === "active").length,
-      roundCount: gameRow.rounds.length,
-      submissionClosesAt: roundRow.submissionClosesAt,
-      votingClosesAt: roundRow.votingClosesAt,
-      now: new Date(),
-    }),
-  ];
+  const actions = computeActions({
+    gameState: gameRow.state,
+    activeRoundPhase,
+    actorRole: actorPlayer.role,
+    actorStatus: actorPlayer.status,
+    activePlayerCount: gameRow.players.filter((p) => p.status === "active").length,
+    roundCount: gameRow.rounds.length,
+    submissionClosesAt: roundRow.submissionClosesAt,
+    votingClosesAt: roundRow.votingClosesAt,
+  });
 
   return {
     id: roundRow.id,

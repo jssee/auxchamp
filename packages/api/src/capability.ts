@@ -75,7 +75,7 @@ const rules: [Action, (ctx: CapabilityContext) => boolean][] = [
   ],
 ];
 
-export function getAllowedActions(ctx: CapabilityContext): ReadonlySet<Action> {
-  if (!ctx.actorRole || !ctx.actorStatus) return new Set();
-  return new Set(rules.filter(([, pred]) => pred(ctx)).map(([action]) => action));
+export function getAllowedActions(ctx: CapabilityContext): Action[] {
+  if (!ctx.actorRole || !ctx.actorStatus) return [];
+  return rules.filter(([, pred]) => pred(ctx)).map(([action]) => action);
 }
