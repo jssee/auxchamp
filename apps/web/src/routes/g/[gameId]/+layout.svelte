@@ -7,7 +7,6 @@
 	const { data, children } = $props();
 	let game = $derived(data.game);
 
-	let can = $derived((action: (typeof game.actions)[number]) => game.actions.includes(action));
 </script>
 
 <div class="container mx-auto max-w-2xl space-y-8 px-4 py-8">
@@ -32,7 +31,7 @@
 	</div>
 
 	<!-- Accept invite banner -->
-	{#if can('accept_invite')}
+	{#if game.actions.includes('accept_invite')}
 		<form class="rounded border border-blue-200 bg-blue-50 p-4" {...acceptInvite}>
 			<input {...acceptInvite.fields.gameId.as('hidden', game.id)} />
 			<div class="flex items-center justify-between">

@@ -3,14 +3,14 @@
 
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
+	import PhaseBadge from '../../PhaseBadge.svelte';
+	import ResultsList from '../../ResultsList.svelte';
 	import BallotForm from './BallotForm.svelte';
 	import SubmissionForm from './SubmissionForm.svelte';
 
 	const { data } = $props();
 	let round = $derived(data.round);
 	let game = $derived(data.game);
-
-	let can = $derived((action: (typeof round.actions)[number]) => round.actions.includes(action));
 
 	let playerNameById = $derived(new Map(game.players.map((p) => [p.id, p.userName])));
 </script>
@@ -19,15 +19,7 @@
 <div>
 	<div class="flex items-center gap-2">
 		<h2 class="font-semibold text-lg">Round {round.number}: {round.theme}</h2>
-		<span
-			class="rounded-full px-2 py-0.5 text-xs
-				{round.phase === 'pending' ? 'bg-neutral-100 text-neutral-600' : ''}
-				{round.phase === 'submitting' ? 'bg-green-100 text-green-800' : ''}
-				{round.phase === 'voting' ? 'bg-purple-100 text-purple-800' : ''}
-				{round.phase === 'scored' ? 'bg-blue-100 text-blue-800' : ''}"
-		>
-			{round.phase}
-		</span>
+		<PhaseBadge phase={round.phase} />
 	</div>
 	{#if round.description}
 		<p class="mt-1 text-neutral-500">{round.description}</p>
@@ -35,7 +27,7 @@
 </div>
 
 <!-- Advance round (creator only) -->
-{#if can('transition_round')}
+{#if round.actions.includes('transition_round')}
 	<form class="rounded border border-amber-200 bg-amber-50 p-4" {...advanceRound}>
 		<input {...advanceRound.fields.gameId.as('hidden', game.id)} />
 		<div class="flex items-center justify-between">
@@ -67,7 +59,7 @@
 {/if}
 
 <!-- Submitting phase -->
-{#if can('submit_song')}
+{#if round.actions.includes('submit_song')}
 	<section>
 		<h3 class="mb-2 font-medium">Your Submission</h3>
 		{#if round.submissionClosesAt}
@@ -90,7 +82,7 @@
 {/if}
 
 <!-- Voting phase -->
-{#if can('cast_ballot') && round.votingSubmissions}
+{#if round.actions.includes('cast_ballot') && round.votingSubmissions}
 	<section>
 		<h3 class="mb-2 font-medium">Vote</h3>
 		{#if round.votingClosesAt}
@@ -112,29 +104,7 @@
 {#if round.phase === 'scored' && round.results}
 	<section>
 		<h3 class="mb-2 font-medium">Results</h3>
-		{#if round.results.submissions.length === 0}
-			<p class="text-sm text-neutral-400">No submissions were scored.</p>
-		{:else}
-			<ol class="space-y-1">
-				{#each round.results.submissions as sub, i (sub.submissionId)}
-					<li class="flex items-center justify-between text-sm">
-						<div class="flex items-center gap-2">
-							<span class="w-5 text-neutral-400">{i + 1}.</span>
-							<span class="truncate">{sub.spotifyTrackUrl}</span>
-							<span class="text-neutral-400">
-								— {playerNameById.get(sub.playerId) ?? 'Unknown'}
-							</span>
-						</div>
-						<span class="font-medium">
-							{'★'.repeat(sub.starCount)}
-							{#if sub.starCount === 0}
-								<span class="text-neutral-300">☆</span>
-							{/if}
-						</span>
-					</li>
-				{/each}
-			</ol>
-		{/if}
+		<ResultsList submissions={round.results.submissions} {playerNameById} />
 	</section>
 {/if}
 

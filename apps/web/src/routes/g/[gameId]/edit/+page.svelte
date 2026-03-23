@@ -3,13 +3,14 @@
 
 	import { Button } from '$lib/components/ui/button';
 	import * as Field from '$lib/components/ui/field';
+	import * as Item from '$lib/components/ui/item';
+	import PhaseBadge from '../PhaseBadge.svelte';
+	import PlayerList from '../PlayerList.svelte';
 	import AddRoundForm from './AddRoundForm.svelte';
 	import InvitePlayerForm from './InvitePlayerForm.svelte';
 
 	const { data } = $props();
 	let game = $derived(data.game);
-
-	let can = $derived((action: (typeof game.actions)[number]) => game.actions.includes(action));
 </script>
 
 <h2 class="font-semibold text-lg">Manage Game</h2>
@@ -19,21 +20,9 @@
 	<h3 class="mb-2 font-medium">
 		Players ({game.players.filter((p) => p.status === 'active').length} active)
 	</h3>
-	<ul class="space-y-1">
-		{#each game.players as p (p.id)}
-			<li class="flex items-center gap-2 text-sm">
-				<span class="font-medium">{p.userName}</span>
-				<span class="text-neutral-400">
-					{p.role === 'creator' ? '(creator)' : ''}
-					{p.status === 'invited' ? '— invited' : ''}
-					{p.status === 'left' ? '— left' : ''}
-					{p.status === 'removed' ? '— removed' : ''}
-				</span>
-			</li>
-		{/each}
-	</ul>
+	<PlayerList players={game.players} />
 
-	{#if can('invite_player')}
+	{#if game.actions.includes('invite_player')}
 		<InvitePlayerForm gameId={game.id} />
 	{/if}
 </section>
@@ -44,37 +33,30 @@
 	{#if game.rounds.length === 0}
 		<p class="text-sm text-neutral-500">No rounds yet.</p>
 	{:else}
-		<ul class="space-y-2">
+		<Item.Group>
 			{#each game.rounds as r (r.id)}
-				<li class="flex items-center justify-between rounded border px-3 py-2 text-sm">
-					<div>
-						<span class="font-medium">Round {r.number}:</span>
-						{r.theme}
+				<Item.Root size="sm" variant="outline">
+					<Item.Content>
+						<Item.Title>Round {r.number}: {r.theme}</Item.Title>
 						{#if r.description}
-							<span class="text-neutral-400">— {r.description}</span>
+							<Item.Description>{r.description}</Item.Description>
 						{/if}
-					</div>
-					<span
-						class="rounded-full px-2 py-0.5 text-xs
-							{r.phase === 'pending' ? 'bg-neutral-100 text-neutral-600' : ''}
-							{r.phase === 'submitting' ? 'bg-green-100 text-green-800' : ''}
-							{r.phase === 'voting' ? 'bg-purple-100 text-purple-800' : ''}
-							{r.phase === 'scored' ? 'bg-blue-100 text-blue-800' : ''}"
-					>
-						{r.phase}
-					</span>
-				</li>
+					</Item.Content>
+					<Item.Actions>
+						<PhaseBadge phase={r.phase} />
+					</Item.Actions>
+				</Item.Root>
 			{/each}
-		</ul>
+		</Item.Group>
 	{/if}
 
-	{#if can('edit_future_round')}
+	{#if game.actions.includes('edit_future_round')}
 		<AddRoundForm gameId={game.id} />
 	{/if}
 </section>
 
 <!-- Start game -->
-{#if can('start_game')}
+{#if game.actions.includes('start_game')}
 	<form {...startGame}>
 		<input {...startGame.fields.gameId.as('hidden', game.id)} />
 		<Button type="submit" class="w-full" disabled={startGame.pending > 0}>
@@ -84,7 +66,7 @@
 	</form>
 {/if}
 
-{#if game.state === 'draft' && !can('start_game')}
+{#if game.state === 'draft' && !game.actions.includes('start_game')}
 	<p class="text-xs text-neutral-400">
 		Need at least 4 active players and 1 round to start.
 	</p>

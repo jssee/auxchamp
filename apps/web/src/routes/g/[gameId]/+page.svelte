@@ -1,12 +1,16 @@
 <script lang="ts">
+	import * as Item from '$lib/components/ui/item';
+	import PhaseBadge from './PhaseBadge.svelte';
+	import PlayerList from './PlayerList.svelte';
+	import ResultsList from './ResultsList.svelte';
+
 	const { data } = $props();
 	let game = $derived(data.game);
 
-	let can = $derived((action: (typeof game.actions)[number]) => game.actions.includes(action));
 	let playerNameById = $derived(new Map(game.players.map((p) => [p.id, p.userName])));
 </script>
 
-{#if can('edit_game')}
+{#if game.actions.includes('edit_game')}
 	<a href="/g/{game.id}/edit" class="text-sm text-neutral-500 hover:underline">Edit game →</a>
 {/if}
 
@@ -15,19 +19,7 @@
 	<h2 class="mb-2 font-semibold text-lg">
 		Players ({game.players.filter((p) => p.status === 'active').length} active)
 	</h2>
-	<ul class="space-y-1">
-		{#each game.players as p (p.id)}
-			<li class="flex items-center gap-2 text-sm">
-				<span class="font-medium">{p.userName}</span>
-				<span class="text-neutral-400">
-					{p.role === 'creator' ? '(creator)' : ''}
-					{p.status === 'invited' ? '— invited' : ''}
-					{p.status === 'left' ? '— left' : ''}
-					{p.status === 'removed' ? '— removed' : ''}
-				</span>
-			</li>
-		{/each}
-	</ul>
+	<PlayerList players={game.players} />
 </section>
 
 <!-- Rounds -->
@@ -36,36 +28,26 @@
 	{#if game.rounds.length === 0}
 		<p class="text-sm text-neutral-500">No rounds yet.</p>
 	{:else}
-		<ul class="space-y-2">
-			{#each game.rounds as r (r.id)}
-				<li>
-					<a
-						href="/g/{game.id}/r/{r.id}"
-						class="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-neutral-50"
-					>
-						<div>
-							<span class="font-medium">Round {r.number}:</span>
-							{r.theme}
-							{#if r.description}
-								<span class="text-neutral-400">— {r.description}</span>
-							{/if}
-						</div>
-						<div class="flex items-center gap-2">
-							<span class="text-neutral-400">{r.submissionCount} submitted</span>
-							<span
-								class="rounded-full px-2 py-0.5 text-xs
-									{r.phase === 'pending' ? 'bg-neutral-100 text-neutral-600' : ''}
-									{r.phase === 'submitting' ? 'bg-green-100 text-green-800' : ''}
-									{r.phase === 'voting' ? 'bg-purple-100 text-purple-800' : ''}
-									{r.phase === 'scored' ? 'bg-blue-100 text-blue-800' : ''}"
-							>
-								{r.phase}
-							</span>
-						</div>
-					</a>
-				</li>
+		<Item.Group>
+			{#each game.rounds as r, i (r.id)}
+				<Item.Root size="sm" variant="outline">
+					{#snippet child({ props })}
+						<a href="/g/{game.id}/r/{r.id}" {...props}>
+							<Item.Content>
+								<Item.Title>Round {r.number}: {r.theme}</Item.Title>
+								{#if r.description}
+									<Item.Description>{r.description}</Item.Description>
+								{/if}
+							</Item.Content>
+							<Item.Actions>
+								<span class="text-xs text-neutral-400">{r.submissionCount} submitted</span>
+								<PhaseBadge phase={r.phase} />
+							</Item.Actions>
+						</a>
+					{/snippet}
+				</Item.Root>
 			{/each}
-		</ul>
+		</Item.Group>
 	{/if}
 </section>
 
@@ -80,29 +62,7 @@
 					<h3 class="mb-2 font-medium">
 						Round {result.roundNumber}{roundInfo ? `: ${roundInfo.theme}` : ''}
 					</h3>
-					{#if result.submissions.length === 0}
-						<p class="text-sm text-neutral-400">No submissions were scored.</p>
-					{:else}
-						<ol class="space-y-1">
-							{#each result.submissions as sub, i (sub.submissionId)}
-								<li class="flex items-center justify-between text-sm">
-									<div class="flex items-center gap-2">
-										<span class="w-5 text-neutral-400">{i + 1}.</span>
-										<span class="truncate">{sub.spotifyTrackUrl}</span>
-										<span class="text-neutral-400">
-											— {playerNameById.get(sub.playerId) ?? 'Unknown'}
-										</span>
-									</div>
-									<span class="font-medium">
-										{'★'.repeat(sub.starCount)}
-										{#if sub.starCount === 0}
-											<span class="text-neutral-300">☆</span>
-										{/if}
-									</span>
-								</li>
-							{/each}
-						</ol>
-					{/if}
+					<ResultsList submissions={result.submissions} {playerNameById} />
 				</div>
 			{/each}
 		</div>
@@ -113,18 +73,22 @@
 {#if game.standings.length > 0}
 	<section>
 		<h2 class="mb-3 font-semibold text-lg">Standings</h2>
-		<ol class="space-y-1">
+		<Item.Group>
 			{#each game.standings as standing, i (standing.playerId)}
-				<li class="flex items-center justify-between rounded border px-3 py-2 text-sm">
-					<div class="flex items-center gap-2">
-						<span class="w-6 font-medium text-neutral-400">{i + 1}.</span>
-						<span class="font-medium">
+				<Item.Root size="sm" variant="outline">
+					<Item.Media>
+						<span class="w-6 font-medium text-sm text-neutral-400">{i + 1}.</span>
+					</Item.Media>
+					<Item.Content>
+						<Item.Title>
 							{playerNameById.get(standing.playerId) ?? 'Unknown'}
-						</span>
-					</div>
-					<span class="font-medium">{standing.totalStars} ★</span>
-				</li>
+						</Item.Title>
+					</Item.Content>
+					<Item.Actions>
+						<span class="font-medium text-sm">{standing.totalStars} ★</span>
+					</Item.Actions>
+				</Item.Root>
 			{/each}
-		</ol>
+		</Item.Group>
 	</section>
 {/if}
