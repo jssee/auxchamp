@@ -548,9 +548,13 @@ test("saveSubmission rejects when submission window has closed", async () => {
 test("saveBallot creates a ballot with 3 stars during voting", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
 
-  // Player 0 votes for 3 submissions from other players (indices 1, 2, 3).
-  const targets = [submissionIds[1]!, submissionIds[2]!, submissionIds[3]!];
+  // players[0] is allPlayers[1], so their submission is submissionIds[1].
+  // Vote for the other three: creator (0), players[1] (2), players[2] (3).
+  const targets = [submissionIds[0]!, submissionIds[2]!, submissionIds[3]!];
   const result = await saveBallot(players[0]!.id, { gameId, submissionIds: targets });
+
+  // Capture before toMatchObject — Bun's matcher can mutate the received object.
+  const ballotId = result.ballotId;
 
   expect(result).toMatchObject({
     ballotId: expect.any(String),
@@ -558,23 +562,23 @@ test("saveBallot creates a ballot with 3 stars during voting", async () => {
     submissionIds: targets,
   });
 
-  const stars = await db.select().from(star).where(eq(star.ballotId, result.ballotId));
+  const stars = await db.select().from(star).where(eq(star.ballotId, ballotId));
   expect(stars).toHaveLength(3);
 });
 
 test("saveBallot updates an existing ballot by replacing stars", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
 
-  // Player 0's submission is index 0; indices 1-3 belong to other players.
+  // players[0]'s submission is submissionIds[1]. Vote for the other three.
   const first = await saveBallot(players[0]!.id, {
     gameId,
-    submissionIds: [submissionIds[1]!, submissionIds[2]!, submissionIds[3]!],
+    submissionIds: [submissionIds[0]!, submissionIds[2]!, submissionIds[3]!],
   });
 
   // Re-vote with the same targets in a different order to prove replacement.
   const second = await saveBallot(players[0]!.id, {
     gameId,
-    submissionIds: [submissionIds[3]!, submissionIds[1]!, submissionIds[2]!],
+    submissionIds: [submissionIds[3]!, submissionIds[0]!, submissionIds[2]!],
   });
 
   expect(second.ballotId).toBe(first.ballotId);
