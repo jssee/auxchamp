@@ -38,7 +38,7 @@
 <form {...saveBallot}>
 	<input {...saveBallot.fields.gameId.as('hidden', props.gameId)} />
 	{#each [...selectedSubmissions] as id}
-		<input type="hidden" name="submissionIds" value={id} />
+		<input type="hidden" name="submissionIds[]" value={id} />
 	{/each}
 
 	<p class="mb-3 text-sm text-neutral-500">
