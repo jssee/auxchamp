@@ -1,0 +1,3 @@
+# Prettier is scoped to .svelte files only; oxfmt handles everything else.
+*
+!**/*.svelte

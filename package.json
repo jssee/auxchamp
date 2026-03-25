@@ -32,7 +32,8 @@
     "db:studio": "turbo -F @auxchamp/db db:studio",
     "db:generate": "turbo -F @auxchamp/db db:generate",
     "db:migrate": "turbo -F @auxchamp/db db:migrate",
-    "check": "oxlint && oxfmt --write"
+    "check": "oxlint && oxfmt --ignore-path .gitignore --write && prettier --write .",
+    "check:ci": "oxlint && oxfmt --ignore-path .gitignore --check && prettier --check ."
   },
   "dependencies": {
     "@auxchamp/env": "workspace:*",
@@ -45,6 +46,8 @@
     "lefthook": "^2.0.13",
     "oxfmt": "^0.26.0",
     "oxlint": "^1.41.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-svelte": "^3.5.1",
     "turbo": "^2.8.12",
     "typescript": "catalog:"
   },
