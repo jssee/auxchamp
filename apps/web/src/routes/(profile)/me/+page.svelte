@@ -6,10 +6,14 @@
 
   const { data } = $props();
 
-  const getDisplayUsername = () => data.user.displayUsername ?? data.user.username ?? "";
-  const getInitialName = () => (data.user.name === data.user.username ? "" : data.user.name ?? "");
+  const getDisplayUsername = () =>
+    data.user.displayUsername ?? data.user.username ?? "";
+  const getInitialName = () =>
+    data.user.name === data.user.username ? "" : (data.user.name ?? "");
   const getInitialDisplayName = () =>
-    data.user.name !== data.user.username ? data.user.name : getDisplayUsername();
+    data.user.name !== data.user.username
+      ? data.user.name
+      : getDisplayUsername();
   const getInitialEmail = () => data.user.email;
   const emailUpdatesNeedVerification = () => data.user.emailVerified;
 
@@ -21,7 +25,7 @@
 <div class="container mx-auto max-w-3xl space-y-10 px-4 py-8">
   <header class="space-y-2">
     <p class="text-sm text-neutral-400">Settings</p>
-    <h1 class="font-bold text-3xl">
+    <h1 class="text-3xl font-bold">
       {updateProfile.result?.name ?? getInitialDisplayName()}
     </h1>
     <p class="text-sm text-neutral-400">
@@ -37,8 +41,10 @@
 
   <section class="space-y-4">
     <div class="space-y-1">
-      <h2 class="font-semibold text-xl">Public profile</h2>
-      <p class="text-sm text-neutral-400">Update the username and name other players can see.</p>
+      <h2 class="text-xl font-semibold">Public profile</h2>
+      <p class="text-sm text-neutral-400">
+        Update the username and name other players can see.
+      </p>
     </div>
 
     <form {...updateProfile} class="space-y-4">
@@ -53,7 +59,11 @@
       <Field.Set>
         <Field.Field>
           <Field.Label for="username">Username</Field.Label>
-          <Input id="username" autocomplete="username" {...updateProfile.fields.username.as("text")} />
+          <Input
+            id="username"
+            autocomplete="username"
+            {...updateProfile.fields.username.as("text")}
+          />
           {#each updateProfile.fields.username.issues() as issue}
             <Field.Error>{issue.message}</Field.Error>
           {/each}
@@ -61,8 +71,15 @@
 
         <Field.Field>
           <Field.Label for="name">Name</Field.Label>
-          <Input id="name" autocomplete="name" placeholder="Optional" {...updateProfile.fields.name.as("text")} />
-          <Field.Description>Leave blank to fall back to your username.</Field.Description>
+          <Input
+            id="name"
+            autocomplete="name"
+            placeholder="Optional"
+            {...updateProfile.fields.name.as("text")}
+          />
+          <Field.Description
+            >Leave blank to fall back to your username.</Field.Description
+          >
           {#each updateProfile.fields.name.issues() as issue}
             <Field.Error>{issue.message}</Field.Error>
           {/each}
@@ -77,8 +94,10 @@
 
   <section class="space-y-4 border-t border-neutral-800 pt-6">
     <div class="space-y-1">
-      <h2 class="font-semibold text-xl">Email</h2>
-      <p class="text-sm text-neutral-400">Update the email address attached to this account.</p>
+      <h2 class="text-xl font-semibold">Email</h2>
+      <p class="text-sm text-neutral-400">
+        Update the email address attached to this account.
+      </p>
     </div>
 
     <form {...updateEmail} class="space-y-4">
@@ -93,12 +112,18 @@
       <Field.Set>
         <Field.Field>
           <Field.Label for="email">Email</Field.Label>
-          <Input id="email" autocomplete="email" {...updateEmail.fields.email.as("email")} />
+          <Input
+            id="email"
+            autocomplete="email"
+            {...updateEmail.fields.email.as("email")}
+          />
           <Field.Description>
             {#if emailUpdatesNeedVerification()}
-              This minimal flow stops here for verified emails until email delivery is wired up.
+              This minimal flow stops here for verified emails until email
+              delivery is wired up.
             {:else}
-              Direct email changes are enabled while email verification is not in use.
+              Direct email changes are enabled while email verification is not
+              in use.
             {/if}
           </Field.Description>
           {#each updateEmail.fields.email.issues() as issue}
@@ -106,7 +131,10 @@
           {/each}
         </Field.Field>
 
-        <Button type="submit" disabled={updateEmail.pending > 0 || emailUpdatesNeedVerification()}>
+        <Button
+          type="submit"
+          disabled={updateEmail.pending > 0 || emailUpdatesNeedVerification()}
+        >
           {updateEmail.pending > 0 ? "Saving..." : "Save email"}
         </Button>
       </Field.Set>
@@ -115,8 +143,10 @@
 
   <section class="space-y-4 border-t border-neutral-800 pt-6">
     <div class="space-y-1">
-      <h2 class="font-semibold text-xl">Password</h2>
-      <p class="text-sm text-neutral-400">Set a new password and revoke your other active sessions.</p>
+      <h2 class="text-xl font-semibold">Password</h2>
+      <p class="text-sm text-neutral-400">
+        Set a new password and revoke your other active sessions.
+      </p>
     </div>
 
     <form {...updatePassword} class="space-y-4">

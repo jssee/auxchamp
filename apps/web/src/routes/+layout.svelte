@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { ModeWatcher } from 'mode-watcher';
-    import { injectSpeedInsights } from '@vercel/speed-insights/sveltekit';
+  import { ModeWatcher } from "mode-watcher";
+  import { injectSpeedInsights } from "@vercel/speed-insights/sveltekit";
 
-    import Header from '$lib/components/Header.svelte';
-    import { Toaster } from '$lib/components/ui/sonner';
-    import favicon from "$lib/assets/favicon.svg";
-	import '../app.css';
+  import Header from "$lib/components/Header.svelte";
+  import { Toaster } from "$lib/components/ui/sonner";
+  import favicon from "$lib/assets/favicon.svg";
+  import "../app.css";
 
-    injectSpeedInsights();
+  injectSpeedInsights();
 
-	const { children } = $props();
+  const { children } = $props();
 </script>
 
 <svelte:head>
@@ -26,8 +26,8 @@
 <Toaster />
 
 <div class="grid h-svh grid-rows-[auto_1fr]">
-	<Header />
-	<main class="overflow-y-auto">
-		{@render children()}
-	</main>
+  <Header />
+  <main class="overflow-y-auto">
+    {@render children()}
+  </main>
 </div>

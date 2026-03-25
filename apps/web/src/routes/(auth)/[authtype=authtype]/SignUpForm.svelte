@@ -30,7 +30,9 @@
     </Field.Field>
 
     <Field.Field>
-      <Field.Label for="name-{id}">Name <span class="text-muted-foreground">(optional)</span></Field.Label>
+      <Field.Label for="name-{id}"
+        >Name <span class="text-muted-foreground">(optional)</span></Field.Label
+      >
       <Input
         id="name-{id}"
         autocomplete="name"

@@ -18,7 +18,7 @@
   /** Resolve message code to a static string; ignore unknown codes. */
   const message = $derived.by(() => {
     const code = page.url.searchParams.get("message");
-    return code ? AUTH_MESSAGES[code] ?? null : null;
+    return code ? (AUTH_MESSAGES[code] ?? null) : null;
   });
 
   $effect(() => {
