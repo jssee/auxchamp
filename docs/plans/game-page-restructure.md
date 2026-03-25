@@ -59,37 +59,37 @@ The current route uses `[id]`. Rename to `[gameId]` for clarity now that `[round
 
 ### API package (`packages/api`)
 
-| File | Change |
-|------|--------|
-| `src/query.ts` | Trim `getGame` (remove `activeRound`, `actorSubmission`, `actorBallot`, `votingSubmissions`), add `getRound` |
-| `src/schema.ts` | Add `getRoundInput/OutputSchema`, trim `getGameOutputSchema` |
-| `src/contract.ts` | Add `getRound` contract |
-| `src/router.ts` | Wire `getRound` procedure |
-| `src/query.test.ts` | Tests for `getRound`, update `getGame` tests |
+| File                | Change                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/query.ts`      | Trim `getGame` (remove `activeRound`, `actorSubmission`, `actorBallot`, `votingSubmissions`), add `getRound` |
+| `src/schema.ts`     | Add `getRoundInput/OutputSchema`, trim `getGameOutputSchema`                                                 |
+| `src/contract.ts`   | Add `getRound` contract                                                                                      |
+| `src/router.ts`     | Wire `getRound` procedure                                                                                    |
+| `src/query.test.ts` | Tests for `getRound`, update `getGame` tests                                                                 |
 
 ### Web app (`apps/web`)
 
-| File | Change |
-|------|--------|
-| `src/routes/g/[gameId]/+layout.server.ts` | New — loads game shell |
-| `src/routes/g/[gameId]/+layout.svelte` | New — renders game header + nav, `{@render children()}` |
-| `src/routes/g/[gameId]/+page.svelte` | Rewrite — overview: rounds list, standings |
-| `src/routes/g/[gameId]/edit/+page.svelte` | New — creator-only: invite, add rounds, start game |
-| `src/routes/g/[gameId]/edit/+page.server.ts` | New — guard: redirect non-creators (checks `actorPlayer.role` from parent layout data) |
-| `src/routes/g/[gameId]/r/[roundId]/+page.server.ts` | New — loads round via `getRound` |
-| `src/routes/g/[gameId]/r/[roundId]/+page.svelte` | New — round detail: phase info, submission/ballot forms, advance control |
-| `src/routes/g/[gameId]/r/[roundId]/results/+page.server.ts` | New — loads round via `getRound`, guard: only scored rounds |
-| `src/routes/g/[gameId]/r/[roundId]/results/+page.svelte` | New — results display |
-| `src/routes/g/[gameId]/r/[roundId]/BallotForm.svelte` | New — extracted from current page |
-| `src/routes/g/[gameId]/edit/AddRoundForm.svelte` | Move from current location |
-| `src/routes/g/[gameId]/edit/InvitePlayerForm.svelte` | Move from current location |
-| `src/routes/g/[gameId]/r/[roundId]/SubmissionForm.svelte` | Move from current location |
-| `src/lib/game.remote.ts` | Keep as-is, forms work unchanged |
+| File                                                        | Change                                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `src/routes/g/[gameId]/+layout.server.ts`                   | New — loads game shell                                                                 |
+| `src/routes/g/[gameId]/+layout.svelte`                      | New — renders game header + nav, `{@render children()}`                                |
+| `src/routes/g/[gameId]/+page.svelte`                        | Rewrite — overview: rounds list, standings                                             |
+| `src/routes/g/[gameId]/edit/+page.svelte`                   | New — creator-only: invite, add rounds, start game                                     |
+| `src/routes/g/[gameId]/edit/+page.server.ts`                | New — guard: redirect non-creators (checks `actorPlayer.role` from parent layout data) |
+| `src/routes/g/[gameId]/r/[roundId]/+page.server.ts`         | New — loads round via `getRound`                                                       |
+| `src/routes/g/[gameId]/r/[roundId]/+page.svelte`            | New — round detail: phase info, submission/ballot forms, advance control               |
+| `src/routes/g/[gameId]/r/[roundId]/results/+page.server.ts` | New — loads round via `getRound`, guard: only scored rounds                            |
+| `src/routes/g/[gameId]/r/[roundId]/results/+page.svelte`    | New — results display                                                                  |
+| `src/routes/g/[gameId]/r/[roundId]/BallotForm.svelte`       | New — extracted from current page                                                      |
+| `src/routes/g/[gameId]/edit/AddRoundForm.svelte`            | Move from current location                                                             |
+| `src/routes/g/[gameId]/edit/InvitePlayerForm.svelte`        | Move from current location                                                             |
+| `src/routes/g/[gameId]/r/[roundId]/SubmissionForm.svelte`   | Move from current location                                                             |
+| `src/lib/game.remote.ts`                                    | Keep as-is, forms work unchanged                                                       |
 
 ### Delete
 
-| File | Reason |
-|------|--------|
+| File                                    | Reason                  |
+| --------------------------------------- | ----------------------- |
 | `src/routes/g/[id]/` (entire directory) | Replaced by `[gameId]/` |
 
 ## Reuse
