@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
-
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Field from '$lib/components/ui/field/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -16,9 +14,13 @@
 
 	const props: Props = $props();
 
-	// Capture initial values once so user edits survive invalidation without relying on reactive props.
-	saveSubmission.fields.spotifyTrackUrl.set(untrack(() => props.initialTrackUrl ?? ''));
-	saveSubmission.fields.note.set(untrack(() => props.initialNote ?? ''));
+	// Re-sync form fields when server data changes (e.g. after successful submit + page reload).
+	$effect(() => {
+		saveSubmission.fields.spotifyTrackUrl.set(props.initialTrackUrl ?? '');
+	});
+	$effect(() => {
+		saveSubmission.fields.note.set(props.initialNote ?? '');
+	});
 </script>
 
 <form {...saveSubmission}>

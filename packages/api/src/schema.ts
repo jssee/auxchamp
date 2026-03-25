@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { actionValues } from "./capability";
 import { isSpotifyTrackUrl } from "./util";
 
 /**
@@ -149,18 +150,6 @@ const roundSchema = v.object({
 
 type Round = v.InferOutput<typeof roundSchema>;
 
-const activeRoundSchema = v.object({
-  id: v.string(),
-  number: v.number(),
-  theme: v.string(),
-  description: v.nullable(v.string()),
-  phase: v.picklist(roundPhaseValues),
-  submissionOpensAt: v.nullable(v.date()),
-  submissionClosesAt: v.nullable(v.date()),
-});
-
-type ActiveRound = v.InferOutput<typeof activeRoundSchema>;
-
 const actorPlayerSchema = v.object({
   id: v.string(),
   role: v.picklist(playerRoleValues),
@@ -177,6 +166,76 @@ const actorSubmissionSchema = v.object({
 });
 
 type ActorSubmission = v.InferOutput<typeof actorSubmissionSchema>;
+
+const actorBallotSchema = v.object({
+  ballotId: v.string(),
+  submissionIds: v.array(v.string()),
+});
+
+type ActorBallot = v.InferOutput<typeof actorBallotSchema>;
+
+const votingSubmissionSchema = v.object({
+  id: v.string(),
+  playerId: v.string(),
+  spotifyTrackUrl: v.string(),
+  note: v.nullable(v.string()),
+});
+
+type VotingSubmission = v.InferOutput<typeof votingSubmissionSchema>;
+
+const roundResultSubmissionSchema = v.object({
+  submissionId: v.string(),
+  playerId: v.string(),
+  spotifyTrackUrl: v.string(),
+  starCount: v.number(),
+});
+
+const roundResultSchema = v.object({
+  roundId: v.string(),
+  roundNumber: v.number(),
+  submissions: v.array(roundResultSubmissionSchema),
+});
+
+type RoundResult = v.InferOutput<typeof roundResultSchema>;
+
+const standingSchema = v.object({
+  playerId: v.string(),
+  totalStars: v.number(),
+});
+
+type Standing = v.InferOutput<typeof standingSchema>;
+
+export const getRoundInputSchema = v.object({
+  gameId: v.string(),
+  roundId: v.string(),
+});
+export type GetRoundInput = v.InferOutput<typeof getRoundInputSchema>;
+
+export const getRoundOutputSchema = v.nullable(
+  v.object({
+    id: v.string(),
+    number: v.number(),
+    theme: v.string(),
+    description: v.nullable(v.string()),
+    phase: v.picklist(roundPhaseValues),
+    submissionOpensAt: v.nullable(v.date()),
+    submissionClosesAt: v.nullable(v.date()),
+    votingOpensAt: v.nullable(v.date()),
+    votingClosesAt: v.nullable(v.date()),
+
+    actorPlayer: actorPlayerSchema,
+    actorSubmission: v.nullable(actorSubmissionSchema),
+    actorBallot: v.nullable(actorBallotSchema),
+    votingSubmissions: v.nullable(v.array(votingSubmissionSchema)),
+    results: v.nullable(
+      v.object({
+        submissions: v.array(roundResultSubmissionSchema),
+      }),
+    ),
+    actions: v.array(v.picklist(actionValues)),
+  }),
+);
+export type GetRoundOutput = v.InferOutput<typeof getRoundOutputSchema>;
 
 export const getGameInputSchema = v.object({
   gameId: v.string(),
@@ -196,11 +255,50 @@ export const getGameOutputSchema = v.nullable(
     createdAt: v.date(),
     players: v.array(playerSchema),
     rounds: v.array(roundSchema),
-    activeRound: v.nullable(activeRoundSchema),
     actorPlayer: actorPlayerSchema,
-    actorSubmission: v.nullable(actorSubmissionSchema),
+    roundResults: v.array(roundResultSchema),
+    standings: v.array(standingSchema),
+    actions: v.array(v.picklist(actionValues)),
   }),
 );
 export type GetGameOutput = v.InferOutput<typeof getGameOutputSchema>;
 
-export type { ActiveRound, ActorPlayer, ActorSubmission, Player, Round };
+export const advanceRoundInputSchema = v.object({
+  gameId: v.string(),
+});
+export type AdvanceRoundInput = v.InferOutput<typeof advanceRoundInputSchema>;
+
+export const advanceRoundOutputSchema = v.object({
+  roundId: v.string(),
+  fromPhase: v.picklist(["submitting", "voting"]),
+  toPhase: v.picklist(["voting", "scored"]),
+  nextRoundId: v.nullable(v.string()),
+  gameCompleted: v.boolean(),
+});
+export type AdvanceRoundOutput = v.InferOutput<typeof advanceRoundOutputSchema>;
+
+export const saveBallotInputSchema = v.object({
+  gameId: v.string(),
+  submissionIds: v.pipe(v.array(v.string()), v.length(3, "Must star exactly 3 submissions")),
+});
+export type SaveBallotInput = v.InferOutput<typeof saveBallotInputSchema>;
+
+export const saveBallotOutputSchema = v.object({
+  ballotId: v.string(),
+  roundId: v.string(),
+  playerId: v.string(),
+  gameId: v.string(),
+  submissionIds: v.array(v.string()),
+});
+export type SaveBallotOutput = v.InferOutput<typeof saveBallotOutputSchema>;
+
+export type {
+  ActorBallot,
+  ActorPlayer,
+  ActorSubmission,
+  Player,
+  Round,
+  RoundResult,
+  Standing,
+  VotingSubmission,
+};

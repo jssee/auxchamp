@@ -5,8 +5,8 @@ import { player } from "./player";
 import { round } from "./round";
 import { star } from "./star";
 
-export const submission = pgTable(
-  "submission",
+export const ballot = pgTable(
+  "ballot",
   {
     id: text("id").primaryKey(),
     roundId: text("round_id")
@@ -15,9 +15,6 @@ export const submission = pgTable(
     playerId: text("player_id")
       .notNull()
       .references(() => player.id, { onDelete: "cascade" }),
-    spotifyTrackUrl: text("spotify_track_url").notNull(),
-    note: text("note"),
-    submittedAt: timestamp("submitted_at").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -25,19 +22,19 @@ export const submission = pgTable(
       .notNull(),
   },
   (table) => [
-    index("submission_round_id_idx").on(table.roundId),
-    index("submission_player_id_idx").on(table.playerId),
-    unique("submission_round_id_player_id_unique").on(table.roundId, table.playerId),
+    index("ballot_round_id_idx").on(table.roundId),
+    index("ballot_player_id_idx").on(table.playerId),
+    unique("ballot_round_id_player_id_unique").on(table.roundId, table.playerId),
   ],
 );
 
-export const submissionRelations = relations(submission, ({ many, one }) => ({
+export const ballotRelations = relations(ballot, ({ many, one }) => ({
   round: one(round, {
-    fields: [submission.roundId],
+    fields: [ballot.roundId],
     references: [round.id],
   }),
   player: one(player, {
-    fields: [submission.playerId],
+    fields: [ballot.playerId],
     references: [player.id],
   }),
   stars: many(star),

@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "auxchamp",
@@ -81,6 +80,7 @@
       "dependencies": {
         "@auxchamp/db": "workspace:*",
         "@auxchamp/env": "workspace:*",
+        "@better-auth/core": "catalog:",
         "better-auth": "catalog:",
         "dotenv": "catalog:",
         "valibot": "catalog:",
@@ -126,6 +126,7 @@
     },
   },
   "catalog": {
+    "@better-auth/core": "1.5.2",
     "@orpc/client": "^1.12.2",
     "@orpc/contract": "^1.12.2",
     "@orpc/openapi": "^1.12.2",

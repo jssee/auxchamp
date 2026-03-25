@@ -15,6 +15,7 @@
   "dependencies": {
     "@auxchamp/db": "workspace:*",
     "@auxchamp/env": "workspace:*",
+    "@better-auth/core": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "valibot": "catalog:"

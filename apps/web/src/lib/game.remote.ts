@@ -1,11 +1,13 @@
-import { command, form, getRequestEvent } from "$app/server";
+import { form, getRequestEvent } from "$app/server";
 import { redirect } from "@sveltejs/kit";
 
 import {
   acceptInviteInputSchema,
   addRoundInputSchema,
+  advanceRoundInputSchema,
   createGameInputSchema,
   invitePlayerInputSchema,
+  saveBallotInputSchema,
   saveSubmissionInputSchema,
   startGameInputSchema,
 } from "@auxchamp/api/schema";
@@ -45,14 +47,25 @@ export const invitePlayer = form(invitePlayerInputSchema, async (input, issue) =
   }
 });
 
-export const acceptInvite = command(acceptInviteInputSchema, async (input) => {
+export const acceptInvite = form(acceptInviteInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
-  return api.acceptInvite(input);
+
+  try {
+    return await api.acceptInvite(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.gameId("Unable to accept invite."));
+  }
 });
 
-export const startGame = command(startGameInputSchema, async (input) => {
+export const startGame = form(startGameInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
-  return api.startGame(input);
+
+  try {
+    const result = await api.startGame(input);
+    redirect(303, `/g/${result.gameId}/r/${result.openRoundId}`);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.gameId("Unable to start game."));
+  }
 });
 
 export const saveSubmission = form(saveSubmissionInputSchema, async (input, issue) => {
@@ -62,5 +75,25 @@ export const saveSubmission = form(saveSubmissionInputSchema, async (input, issu
     return await api.saveSubmission(input);
   } catch (thrown) {
     rethrowAsIssue(thrown, issue.spotifyTrackUrl("Unable to submit this track right now."));
+  }
+});
+
+export const saveBallot = form(saveBallotInputSchema, async (input, issue) => {
+  const api = createApi(getRequestEvent().request);
+
+  try {
+    return await api.saveBallot(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.submissionIds("Unable to save ballot."));
+  }
+});
+
+export const advanceRound = form(advanceRoundInputSchema, async (input, issue) => {
+  const api = createApi(getRequestEvent().request);
+
+  try {
+    return await api.advanceRound(input);
+  } catch (thrown) {
+    rethrowAsIssue(thrown, issue.gameId("Unable to advance round."));
   }
 });

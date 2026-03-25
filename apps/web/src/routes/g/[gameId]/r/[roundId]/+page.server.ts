@@ -7,13 +7,16 @@ export const load = async ({ params, request }) => {
   const api = createApi(request);
 
   try {
-    const game = await api.getGame({ gameId: params.id });
+    const round = await api.getRound({
+      gameId: params.gameId,
+      roundId: params.roundId,
+    });
 
-    if (!game) {
-      error(404, "Game not found");
+    if (!round) {
+      error(404, "Round not found");
     }
 
-    return { game };
+    return { round };
   } catch (thrown) {
     if (thrown instanceof ORPCError && thrown.code === "UNAUTHORIZED") {
       redirect(303, "/signin");

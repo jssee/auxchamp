@@ -10,6 +10,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
+import { ballot } from "./ballot";
 import { game } from "./game";
 import { submission } from "./submission";
 
@@ -50,4 +51,5 @@ export const roundRelations = relations(round, ({ many, one }) => ({
     references: [game.id],
   }),
   submissions: many(submission),
+  ballots: many(ballot),
 }));

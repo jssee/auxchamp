@@ -9,9 +9,17 @@ dotenv.config({
 const { db } = await import("@auxchamp/db");
 const { game } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame, saveSubmission } =
-  await import("./mutation");
-const { getGame, getPublicProfile } = await import("./query");
+const {
+  acceptInvite,
+  addRound,
+  advanceRound,
+  createGame,
+  invitePlayer,
+  saveBallot,
+  startGame,
+  saveSubmission,
+} = await import("./mutation");
+const { getGame, getPublicProfile, getRound } = await import("./query");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -109,7 +117,7 @@ test("returns game metadata, players, and rounds for a draft game", async () => 
   expect(detail!.rounds[1]).toMatchObject({ number: 2, theme: "Deep cuts", submissionCount: 0 });
 });
 
-test("returns activeRound and actorSubmission for an active game", async () => {
+test("returns submission count for an active game round", async () => {
   const { gameId, players } = await setupActiveGame();
 
   await saveSubmission(players[0]!.id, {
@@ -119,27 +127,7 @@ test("returns activeRound and actorSubmission for an active game", async () => {
   });
 
   const detail = await getGame(players[0]!.id, gameId);
-
-  expect(detail!.activeRound).toMatchObject({
-    number: 1,
-    phase: "submitting",
-  });
-  expect(detail!.actorSubmission).toMatchObject({
-    spotifyTrackUrl: "https://open.spotify.com/track/abc",
-    note: "My pick",
-  });
-
-  // Submission count for round 1 should reflect the one submission
   expect(detail!.rounds[0]!.submissionCount).toBe(1);
-});
-
-test("returns null actorSubmission when the actor has not submitted", async () => {
-  const { gameId, players } = await setupActiveGame();
-
-  const detail = await getGame(players[0]!.id, gameId);
-
-  expect(detail!.activeRound).not.toBeNull();
-  expect(detail!.actorSubmission).toBeNull();
 });
 
 test("returns actorPlayer reflecting the actor's participation", async () => {
@@ -163,6 +151,255 @@ test("returns null for a non-member", async () => {
   const outsider = await createTestUser("Outsider");
   const detail = await getGame(outsider.id, gameId);
   expect(detail).toBeNull();
+});
+
+test("returns roundResults and standings after scoring", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  const allPlayers = [creator, ...players];
+  for (let i = 0; i < allPlayers.length; i++) {
+    await saveSubmission(allPlayers[i]!.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/t${i}`,
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // submitting → voting
+
+  // All players vote (use getRound to get voting submissions).
+  const preScoreDetail = await getGame(creator.id, gameId);
+  const roundId = preScoreDetail!.rounds[0]!.id;
+
+  for (const voter of allPlayers) {
+    const roundDetail = await getRound(voter.id, gameId, roundId);
+    const subs = roundDetail!.votingSubmissions!;
+    const targets = subs.filter((s) => s.playerId !== roundDetail!.actorPlayer.id).slice(0, 3);
+    await saveBallot(voter.id, {
+      gameId,
+      submissionIds: targets.map((t) => t.id),
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // voting → scored
+
+  const scored = await getGame(creator.id, gameId);
+
+  expect(scored!.roundResults).toHaveLength(1);
+  expect(scored!.roundResults[0]!.roundNumber).toBe(1);
+  expect(scored!.roundResults[0]!.submissions.length).toBe(allPlayers.length);
+
+  // Each submission should have a starCount >= 0.
+  for (const sub of scored!.roundResults[0]!.submissions) {
+    expect(sub.starCount).toBeGreaterThanOrEqual(0);
+    expect(sub.submissionId).toBeTypeOf("string");
+    expect(sub.playerId).toBeTypeOf("string");
+  }
+
+  // Results should be sorted by starCount descending.
+  const counts = scored!.roundResults[0]!.submissions.map((s) => s.starCount);
+  for (let i = 1; i < counts.length; i++) {
+    expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]!);
+  }
+
+  // Standings should cover all players.
+  expect(scored!.standings.length).toBeGreaterThan(0);
+  const totalStars = scored!.standings.reduce((sum, s) => sum + s.totalStars, 0);
+  // Each voter gives 3 stars, so total = playerCount * 3.
+  expect(totalStars).toBe(allPlayers.length * 3);
+});
+
+// -- getRound tests -------------------------------------------------------
+
+test("getRound returns null for a non-existent game", async () => {
+  const actor = await createTestUser("Ghost");
+  const result = await getRound(actor.id, "nonexistent", "nonexistent");
+  expect(result).toBeNull();
+});
+
+test("getRound returns null for a non-member", async () => {
+  const { gameId, creator } = await setupActiveGame();
+  const outsider = await createTestUser("Outsider");
+
+  const gameDetail = await getGame(creator.id, gameId);
+  const roundId = gameDetail!.rounds[0]!.id;
+
+  const result = await getRound(outsider.id, gameId, roundId);
+  expect(result).toBeNull();
+});
+
+test("getRound returns null for a non-existent round", async () => {
+  const { gameId, creator } = await setupActiveGame();
+  const result = await getRound(creator.id, gameId, "nonexistent-round");
+  expect(result).toBeNull();
+});
+
+test("getRound returns round metadata and actorSubmission during submitting phase", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  await saveSubmission(players[0]!.id, {
+    gameId,
+    spotifyTrackUrl: "https://open.spotify.com/track/abc",
+    note: "Great song",
+  });
+
+  const gameDetail = await getGame(creator.id, gameId);
+  const roundId = gameDetail!.rounds[0]!.id;
+
+  // Player who submitted sees their submission.
+  const withSub = await getRound(players[0]!.id, gameId, roundId);
+  expect(withSub).toMatchObject({
+    number: 1,
+    theme: "Round 1",
+    phase: "submitting",
+  });
+  expect(withSub!.actorSubmission).toMatchObject({
+    spotifyTrackUrl: "https://open.spotify.com/track/abc",
+    note: "Great song",
+  });
+  expect(withSub!.actorBallot).toBeNull();
+  expect(withSub!.votingSubmissions).toBeNull();
+  expect(withSub!.results).toBeNull();
+  expect(withSub!.actions).toContain("submit_song");
+
+  // Player who hasn't submitted sees null actorSubmission.
+  const withoutSub = await getRound(players[1]!.id, gameId, roundId);
+  expect(withoutSub!.actorSubmission).toBeNull();
+  expect(withoutSub!.actions).toContain("submit_song");
+});
+
+test("getRound returns actorBallot and votingSubmissions during voting phase", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  const allPlayers = [creator, ...players];
+  for (let i = 0; i < allPlayers.length; i++) {
+    await saveSubmission(allPlayers[i]!.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/t${i}`,
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // submitting → voting
+
+  const gameDetail = await getGame(creator.id, gameId);
+  const roundId = gameDetail!.rounds[0]!.id;
+
+  // Before voting: no ballot, but votingSubmissions present.
+  const beforeVote = await getRound(players[0]!.id, gameId, roundId);
+  expect(beforeVote!.phase).toBe("voting");
+  expect(beforeVote!.votingSubmissions).toHaveLength(allPlayers.length);
+  expect(beforeVote!.actorBallot).toBeNull();
+  expect(beforeVote!.actorSubmission).toBeNull();
+  expect(beforeVote!.results).toBeNull();
+  expect(beforeVote!.actions).toContain("cast_ballot");
+
+  // Vote, then check ballot is returned.
+  const subs = beforeVote!.votingSubmissions!;
+  const voterPlayerId = beforeVote!.actorPlayer.id;
+  const targets = subs.filter((s) => s.playerId !== voterPlayerId).slice(0, 3);
+  await saveBallot(players[0]!.id, {
+    gameId,
+    submissionIds: targets.map((t) => t.id),
+  });
+
+  const afterVote = await getRound(players[0]!.id, gameId, roundId);
+  expect(afterVote!.actorBallot).toMatchObject({
+    ballotId: expect.any(String),
+    submissionIds: expect.arrayContaining(targets.map((t) => t.id)),
+  });
+});
+
+test("getRound returns results for a scored round", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  const allPlayers = [creator, ...players];
+  for (let i = 0; i < allPlayers.length; i++) {
+    await saveSubmission(allPlayers[i]!.id, {
+      gameId,
+      spotifyTrackUrl: `https://open.spotify.com/track/t${i}`,
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // submitting → voting
+
+  // All players vote (use getRound for voting submissions).
+  const gameDetail = await getGame(creator.id, gameId);
+  const roundId = gameDetail!.rounds[0]!.id;
+
+  for (const voter of allPlayers) {
+    const roundDetail = await getRound(voter.id, gameId, roundId);
+    const subs = roundDetail!.votingSubmissions!;
+    const targets = subs.filter((s) => s.playerId !== roundDetail!.actorPlayer.id).slice(0, 3);
+    await saveBallot(voter.id, {
+      gameId,
+      submissionIds: targets.map((t) => t.id),
+    });
+  }
+
+  await advanceRound(creator.id, { gameId }); // voting → scored
+  const scored = await getRound(creator.id, gameId, roundId);
+
+  expect(scored!.phase).toBe("scored");
+  expect(scored!.results).not.toBeNull();
+  expect(scored!.results!.submissions.length).toBe(allPlayers.length);
+
+  // Results sorted by starCount descending.
+  const counts = scored!.results!.submissions.map((s) => s.starCount);
+  for (let i = 1; i < counts.length; i++) {
+    expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]!);
+  }
+
+  // No active-phase data for scored rounds.
+  expect(scored!.actorSubmission).toBeNull();
+  expect(scored!.actorBallot).toBeNull();
+  expect(scored!.votingSubmissions).toBeNull();
+});
+
+test("getRound returns empty actions for a pending round", async () => {
+  const creator = await createTestUser("Alice");
+  const gameResult = await createGame(creator.id, {
+    name: "Multi round",
+    submissionWindowDays: 7,
+    votingWindowDays: 3,
+  });
+  createdGameIds.add(gameResult.gameId);
+
+  await addRound(creator.id, { gameId: gameResult.gameId, theme: "Round 1" });
+  await addRound(creator.id, { gameId: gameResult.gameId, theme: "Round 2" });
+
+  // Invite enough players to start.
+  const players = [];
+  for (let i = 0; i < 3; i++) {
+    const p = await createTestUser();
+    await invitePlayer(creator.id, { gameId: gameResult.gameId, targetUserId: p.id });
+    await acceptInvite(p.id, { gameId: gameResult.gameId });
+    players.push(p);
+  }
+
+  await startGame(creator.id, { gameId: gameResult.gameId });
+
+  const gameDetail = await getGame(creator.id, gameResult.gameId);
+  const pendingRound = gameDetail!.rounds.find((r) => r.phase === "pending");
+  expect(pendingRound).toBeDefined();
+
+  const result = await getRound(creator.id, gameResult.gameId, pendingRound!.id);
+  expect(result!.phase).toBe("pending");
+  // Pending round: no submit/vote/transition actions since it's not the active round.
+  expect(result!.actions).not.toContain("submit_song");
+  expect(result!.actions).not.toContain("cast_ballot");
+  expect(result!.actions).not.toContain("transition_round");
+});
+
+test("getRound includes actorPlayer with correct role", async () => {
+  const { gameId, creator, players } = await setupActiveGame();
+
+  const gameDetail = await getGame(creator.id, gameId);
+  const roundId = gameDetail!.rounds[0]!.id;
+
+  const creatorRound = await getRound(creator.id, gameId, roundId);
+  expect(creatorRound!.actorPlayer).toMatchObject({ role: "creator", status: "active" });
+
+  const playerRound = await getRound(players[0]!.id, gameId, roundId);
+  expect(playerRound!.actorPlayer).toMatchObject({ role: "player", status: "active" });
 });
 
 // -- test helpers ---------------------------------------------------------

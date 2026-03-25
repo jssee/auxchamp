@@ -6,13 +6,15 @@ import { user } from "@auxchamp/db/schema/auth";
 import {
   acceptInvite,
   addRound,
+  advanceRound,
   createGame,
   invitePlayer,
+  saveBallot,
   startGame,
   saveSubmission,
 } from "./mutation";
 import { protectedProcedure, publicProcedure } from "./procedure";
-import { getGame, getPublicProfile } from "./query";
+import { getGame, getPublicProfile, getRound } from "./query";
 
 export const appRouter = publicProcedure.router({
   health: publicProcedure.health.handler(() => "OK"),
@@ -50,8 +52,17 @@ export const appRouter = publicProcedure.router({
   saveSubmission: protectedProcedure.saveSubmission.handler(({ context, input }) => {
     return saveSubmission(context.session.user.id, input);
   }),
+  saveBallot: protectedProcedure.saveBallot.handler(({ context, input }) => {
+    return saveBallot(context.session.user.id, input);
+  }),
+  advanceRound: protectedProcedure.advanceRound.handler(({ context, input }) => {
+    return advanceRound(context.session.user.id, input);
+  }),
   getGame: protectedProcedure.getGame.handler(({ context, input }) => {
     return getGame(context.session.user.id, input.gameId);
+  }),
+  getRound: protectedProcedure.getRound.handler(({ context, input }) => {
+    return getRound(context.session.user.id, input.gameId, input.roundId);
   }),
 });
 

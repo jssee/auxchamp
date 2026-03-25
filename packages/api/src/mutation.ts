@@ -1,17 +1,21 @@
 import { ORPCError } from "@orpc/server";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
-import { game, player, round, submission } from "@auxchamp/db/schema/game";
+import { ballot, game, player, round, star, submission } from "@auxchamp/db/schema/game";
 import { nanoid } from "nanoid";
 import type {
   AcceptInviteInput,
   AcceptInviteOutput,
   AddRoundInput,
   AddRoundOutput,
+  AdvanceRoundInput,
+  AdvanceRoundOutput,
   CreateGameInput,
   CreateGameOutput,
   InvitePlayerOutput,
+  SaveBallotInput,
+  SaveBallotOutput,
   SaveSubmissionInput,
   SaveSubmissionOutput,
   StartGameInput,
@@ -328,4 +332,245 @@ export async function saveSubmission(
       note: saved!.note,
     };
   });
+}
+
+export async function saveBallot(
+  actorUserId: string,
+  input: SaveBallotInput,
+): Promise<SaveBallotOutput> {
+  return db.transaction(async (tx) => {
+    const [activePlayer] = await tx
+      .select({ id: player.id })
+      .from(player)
+      .where(
+        and(
+          eq(player.gameId, input.gameId),
+          eq(player.userId, actorUserId),
+          eq(player.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (!activePlayer) {
+      throw new ORPCError("FORBIDDEN", { message: "Only active players can vote." });
+    }
+
+    const [votingRound] = await tx
+      .select({
+        id: round.id,
+        votingClosesAt: round.votingClosesAt,
+      })
+      .from(round)
+      .where(and(eq(round.gameId, input.gameId), eq(round.phase, "voting")))
+      .limit(1);
+
+    if (!votingRound) {
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "No round is currently accepting votes.",
+      });
+    }
+
+    if (votingRound.votingClosesAt && votingRound.votingClosesAt < new Date()) {
+      throw new ORPCError("PRECONDITION_FAILED", { message: "The voting window has closed." });
+    }
+
+    // Validate distinctness.
+    const uniqueIds = new Set(input.submissionIds);
+    if (uniqueIds.size !== 3) {
+      throw new ORPCError("BAD_REQUEST", { message: "Must star 3 distinct submissions." });
+    }
+
+    // Validate all submissions belong to the voting round.
+    const targetSubmissions = await tx
+      .select({ id: submission.id, playerId: submission.playerId })
+      .from(submission)
+      .where(
+        and(eq(submission.roundId, votingRound.id), inArray(submission.id, input.submissionIds)),
+      );
+
+    if (targetSubmissions.length !== 3) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "All starred submissions must belong to the current voting round.",
+      });
+    }
+
+    // Validate no self-voting.
+    if (targetSubmissions.some((s) => s.playerId === activePlayer.id)) {
+      throw new ORPCError("BAD_REQUEST", { message: "Cannot star your own submission." });
+    }
+
+    // Upsert ballot: delete existing stars and replace.
+    const [existing] = await tx
+      .select({ id: ballot.id })
+      .from(ballot)
+      .where(and(eq(ballot.roundId, votingRound.id), eq(ballot.playerId, activePlayer.id)))
+      .limit(1);
+
+    let ballotId: string;
+
+    if (existing) {
+      ballotId = existing.id;
+      await tx.delete(star).where(eq(star.ballotId, ballotId));
+    } else {
+      ballotId = nanoid();
+      await tx.insert(ballot).values({
+        id: ballotId,
+        roundId: votingRound.id,
+        playerId: activePlayer.id,
+      });
+    }
+
+    await tx.insert(star).values(
+      input.submissionIds.map((submissionId) => ({
+        id: nanoid(),
+        ballotId,
+        submissionId,
+      })),
+    );
+
+    return {
+      ballotId,
+      roundId: votingRound.id,
+      playerId: activePlayer.id,
+      gameId: input.gameId,
+      submissionIds: input.submissionIds,
+    };
+  });
+}
+
+/**
+ * Creator-controlled phase advance. Moves the active round forward:
+ *   submitting → voting
+ *   voting → scored (then opens next round or completes game)
+ *
+ * No concurrency guard beyond the transaction; acceptable for this milestone
+ * since only the creator triggers advances. Replace with SELECT … FOR UPDATE
+ * if concurrent advance requests become possible.
+ */
+export async function advanceRound(
+  actorUserId: string,
+  input: AdvanceRoundInput,
+): Promise<AdvanceRoundOutput> {
+  return db.transaction(async (tx) => {
+    // Verify creator.
+    const [creatorPlayer] = await tx
+      .select({ role: player.role })
+      .from(player)
+      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .limit(1);
+
+    if (creatorPlayer?.role !== "creator") {
+      throw new ORPCError("FORBIDDEN", { message: "Only the creator can advance the round." });
+    }
+
+    // Fetch game config and active round in parallel.
+    const [[gameRow], [activeRound]] = await Promise.all([
+      tx
+        .select({
+          submissionWindowDays: game.submissionWindowDays,
+          votingWindowDays: game.votingWindowDays,
+        })
+        .from(game)
+        .where(eq(game.id, input.gameId))
+        .limit(1),
+      tx
+        .select({ id: round.id, number: round.number, phase: round.phase })
+        .from(round)
+        .where(
+          and(
+            eq(round.gameId, input.gameId),
+            or(eq(round.phase, "submitting"), eq(round.phase, "voting")),
+          ),
+        )
+        .limit(1),
+    ]);
+
+    if (!activeRound) {
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "No round is currently in an advanceable phase.",
+      });
+    }
+
+    if (activeRound.phase === "submitting") {
+      return advanceSubmittingToVoting(tx, activeRound, gameRow!.votingWindowDays);
+    }
+
+    return advanceVotingToScored(tx, input.gameId, activeRound, gameRow!.submissionWindowDays);
+  });
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function advanceSubmittingToVoting(
+  tx: Tx,
+  activeRound: { id: string; number: number; phase: string },
+  votingWindowDays: number,
+): Promise<AdvanceRoundOutput> {
+  const now = new Date();
+  const votingClosesAt = new Date(now);
+  votingClosesAt.setDate(votingClosesAt.getDate() + votingWindowDays);
+
+  await tx
+    .update(round)
+    .set({ phase: "voting", votingOpensAt: now, votingClosesAt })
+    .where(eq(round.id, activeRound.id));
+
+  return {
+    roundId: activeRound.id,
+    fromPhase: "submitting",
+    toPhase: "voting",
+    nextRoundId: null,
+    gameCompleted: false,
+  };
+}
+
+async function advanceVotingToScored(
+  tx: Tx,
+  gameId: string,
+  activeRound: { id: string; number: number; phase: string },
+  submissionWindowDays: number,
+): Promise<AdvanceRoundOutput> {
+  // Mark the round as scored.
+  await tx.update(round).set({ phase: "scored" }).where(eq(round.id, activeRound.id));
+
+  // Find the next pending round.
+  const [nextRound] = await tx
+    .select({ id: round.id })
+    .from(round)
+    .where(and(eq(round.gameId, gameId), eq(round.phase, "pending")))
+    .orderBy(asc(round.number))
+    .limit(1);
+
+  if (nextRound) {
+    const now = new Date();
+    const submissionClosesAt = new Date(now);
+    submissionClosesAt.setDate(submissionClosesAt.getDate() + submissionWindowDays);
+
+    await tx
+      .update(round)
+      .set({ phase: "submitting", submissionOpensAt: now, submissionClosesAt })
+      .where(eq(round.id, nextRound.id));
+
+    return {
+      roundId: activeRound.id,
+      fromPhase: "voting",
+      toPhase: "scored",
+      nextRoundId: nextRound.id,
+      gameCompleted: false,
+    };
+  }
+
+  // No more rounds — complete the game.
+  await tx
+    .update(game)
+    .set({ state: "completed", completedAt: new Date() })
+    .where(eq(game.id, gameId));
+
+  return {
+    roundId: activeRound.id,
+    fromPhase: "voting",
+    toPhase: "scored",
+    nextRoundId: null,
+    gameCompleted: true,
+  };
 }

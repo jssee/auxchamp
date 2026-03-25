@@ -10,6 +10,8 @@ test("game schema is exported from the public db barrels", () => {
   expect(rootSchema.player).toBe(gameSchema.player);
   expect(rootSchema.round).toBe(gameSchema.round);
   expect(rootSchema.submission).toBe(gameSchema.submission);
+  expect(rootSchema.ballot).toBe(gameSchema.ballot);
+  expect(rootSchema.star).toBe(gameSchema.star);
 });
 
 test("milestone 1 game tables expose the expected shape and structural constraints", () => {
@@ -50,4 +52,27 @@ test("milestone 1 game tables expose the expected shape and structural constrain
       constraint.getName(),
     ),
   ).toEqual(["submission_round_id_player_id_unique"]);
+
+  expect(getTableConfig(gameSchema.ballot).name).toBe("ballot");
+  expect(Object.keys(getTableColumns(gameSchema.ballot))).toEqual([
+    "id",
+    "roundId",
+    "playerId",
+    "createdAt",
+    "updatedAt",
+  ]);
+  expect(
+    getTableConfig(gameSchema.ballot).uniqueConstraints.map((constraint) => constraint.getName()),
+  ).toEqual(["ballot_round_id_player_id_unique"]);
+
+  expect(getTableConfig(gameSchema.star).name).toBe("star");
+  expect(Object.keys(getTableColumns(gameSchema.star))).toEqual([
+    "id",
+    "ballotId",
+    "submissionId",
+    "createdAt",
+  ]);
+  expect(
+    getTableConfig(gameSchema.star).uniqueConstraints.map((constraint) => constraint.getName()),
+  ).toEqual(["star_ballot_id_submission_id_unique"]);
 });
