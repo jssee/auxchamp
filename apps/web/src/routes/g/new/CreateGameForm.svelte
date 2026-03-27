@@ -1,9 +1,20 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
+  import Counter from "$lib/components/counter.svelte";
   import * as Field from "$lib/components/ui/field/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import { createGame } from "$lib/game.remote";
+
+  // Form field names with `n:` prefix so SvelteKit coerces FormData strings to numbers
+  const submissionName =
+    createGame.fields.submissionWindowDays.as("number").name;
+  const votingName = createGame.fields.votingWindowDays.as("number").name;
+
+  let submissionDays = $state(
+    createGame.fields.submissionWindowDays.value() ?? 1,
+  );
+  let votingDays = $state(createGame.fields.votingWindowDays.value() ?? 1);
 </script>
 
 <form {...createGame}>
@@ -41,13 +52,9 @@
           ? "true"
           : undefined}
       >
-        <Field.Label for="submissionDays">Submission window (days)</Field.Label>
-        <Input
-          id="submissionDays"
-          min="1"
-          step="1"
-          {...createGame.fields.submissionWindowDays.as("number")}
-        />
+        <Field.Label>Submission window (days)</Field.Label>
+        <input type="hidden" name={submissionName} value={submissionDays} />
+        <Counter bind:value={submissionDays} min={1} max={14} />
         <Field.Description
           >How long players have to submit a track each round.</Field.Description
         >
@@ -59,13 +66,9 @@
           ? "true"
           : undefined}
       >
-        <Field.Label for="votingDays">Voting window (days)</Field.Label>
-        <Input
-          id="votingDays"
-          min="1"
-          step="1"
-          {...createGame.fields.votingWindowDays.as("number")}
-        />
+        <Field.Label>Voting window (days)</Field.Label>
+        <input type="hidden" name={votingName} value={votingDays} />
+        <Counter bind:value={votingDays} min={1} max={14} />
         <Field.Description
           >How long players can vote after submissions close.</Field.Description
         >
