@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Field from "$lib/components/ui/field/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
+  import { Button } from "$lib/components/ui/button";
+  import * as Field from "$lib/components/ui/field";
+  import { Input } from "$lib/components/ui/input";
+  import { Textarea } from "$lib/components/ui/textarea";
+  import { fieldInvalid } from "$lib/utils";
   import { saveSubmission } from "$lib/game.remote";
 
   type Props = {
@@ -28,9 +29,9 @@
 
   <Field.Group class="gap-4">
     <Field.Field
-      data-invalid={saveSubmission.fields.spotifyTrackUrl.issues()?.length
-        ? "true"
-        : undefined}
+      data-invalid={fieldInvalid(
+        saveSubmission.fields.spotifyTrackUrl.issues(),
+      )}
     >
       <Field.Label for="spotify-track-url">Spotify track URL</Field.Label>
       <Input
@@ -46,9 +47,7 @@
     </Field.Field>
 
     <Field.Field
-      data-invalid={saveSubmission.fields.note.issues()?.length
-        ? "true"
-        : undefined}
+      data-invalid={fieldInvalid(saveSubmission.fields.note.issues())}
     >
       <Field.Label for="spotify-track-note">Note</Field.Label>
       <Textarea

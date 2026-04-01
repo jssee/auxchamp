@@ -1,27 +1,22 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Field from "$lib/components/ui/field/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
+  import { Button } from "$lib/components/ui/button";
+  import * as Field from "$lib/components/ui/field";
+  import { Input } from "$lib/components/ui/input";
+  import { Textarea } from "$lib/components/ui/textarea";
+  import { fieldInvalid } from "$lib/utils";
   import { createGame } from "$lib/game.remote";
 </script>
 
 <form {...createGame}>
   <Field.Group class="gap-4">
-    <Field.Field
-      data-invalid={createGame.fields.name.issues()?.length
-        ? "true"
-        : undefined}
-    >
+    <Field.Field data-invalid={fieldInvalid(createGame.fields.name.issues())}>
       <Field.Label for="name">Name</Field.Label>
       <Input id="name" required {...createGame.fields.name.as("text")} />
       <Field.Error errors={createGame.fields.name.issues()} />
     </Field.Field>
 
     <Field.Field
-      data-invalid={createGame.fields.description.issues()?.length
-        ? "true"
-        : undefined}
+      data-invalid={fieldInvalid(createGame.fields.description.issues())}
     >
       <Field.Label for="description">Description</Field.Label>
       <Textarea
@@ -37,9 +32,9 @@
 
     <div class="grid gap-4 sm:grid-cols-2">
       <Field.Field
-        data-invalid={createGame.fields.submissionWindowDays.issues()?.length
-          ? "true"
-          : undefined}
+        data-invalid={fieldInvalid(
+          createGame.fields.submissionWindowDays.issues(),
+        )}
       >
         <Field.Label for="submissionDays">Submission window (days)</Field.Label>
         <Input
@@ -55,9 +50,7 @@
       </Field.Field>
 
       <Field.Field
-        data-invalid={createGame.fields.votingWindowDays.issues()?.length
-          ? "true"
-          : undefined}
+        data-invalid={fieldInvalid(createGame.fields.votingWindowDays.issues())}
       >
         <Field.Label for="votingDays">Voting window (days)</Field.Label>
         <Input

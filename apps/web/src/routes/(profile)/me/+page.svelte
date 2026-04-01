@@ -3,6 +3,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
+  import { fieldInvalid } from "$lib/utils";
 
   const { data } = $props();
 
@@ -52,24 +53,24 @@
         <p class="text-sm text-green-600">{updateProfile.result.message}</p>
       {/if}
 
-      {#each updateProfile.fields.allIssues() as issue}
-        <Field.Error>{issue.message}</Field.Error>
-      {/each}
+      <Field.Error errors={updateProfile.fields.allIssues()} />
 
       <Field.Set>
-        <Field.Field>
+        <Field.Field
+          data-invalid={fieldInvalid(updateProfile.fields.username.issues())}
+        >
           <Field.Label for="username">Username</Field.Label>
           <Input
             id="username"
             autocomplete="username"
             {...updateProfile.fields.username.as("text")}
           />
-          {#each updateProfile.fields.username.issues() as issue}
-            <Field.Error>{issue.message}</Field.Error>
-          {/each}
+          <Field.Error errors={updateProfile.fields.username.issues()} />
         </Field.Field>
 
-        <Field.Field>
+        <Field.Field
+          data-invalid={fieldInvalid(updateProfile.fields.name.issues())}
+        >
           <Field.Label for="name">Name</Field.Label>
           <Input
             id="name"
@@ -80,9 +81,7 @@
           <Field.Description
             >Leave blank to fall back to your username.</Field.Description
           >
-          {#each updateProfile.fields.name.issues() as issue}
-            <Field.Error>{issue.message}</Field.Error>
-          {/each}
+          <Field.Error errors={updateProfile.fields.name.issues()} />
         </Field.Field>
 
         <Button type="submit" disabled={updateProfile.pending > 0}>
@@ -105,12 +104,12 @@
         <p class="text-sm text-green-600">{updateEmail.result.message}</p>
       {/if}
 
-      {#each updateEmail.fields.allIssues() as issue}
-        <Field.Error>{issue.message}</Field.Error>
-      {/each}
+      <Field.Error errors={updateEmail.fields.allIssues()} />
 
       <Field.Set>
-        <Field.Field>
+        <Field.Field
+          data-invalid={fieldInvalid(updateEmail.fields.email.issues())}
+        >
           <Field.Label for="email">Email</Field.Label>
           <Input
             id="email"
@@ -126,9 +125,7 @@
               in use.
             {/if}
           </Field.Description>
-          {#each updateEmail.fields.email.issues() as issue}
-            <Field.Error>{issue.message}</Field.Error>
-          {/each}
+          <Field.Error errors={updateEmail.fields.email.issues()} />
         </Field.Field>
 
         <Button
@@ -154,33 +151,37 @@
         <p class="text-sm text-green-600">{updatePassword.result.message}</p>
       {/if}
 
-      {#each updatePassword.fields.allIssues() as issue}
-        <Field.Error>{issue.message}</Field.Error>
-      {/each}
+      <Field.Error errors={updatePassword.fields.allIssues()} />
 
       <Field.Set>
-        <Field.Field>
+        <Field.Field
+          data-invalid={fieldInvalid(
+            updatePassword.fields.currentPassword.issues(),
+          )}
+        >
           <Field.Label for="current-password">Current password</Field.Label>
           <Input
             id="current-password"
             autocomplete="current-password"
             {...updatePassword.fields.currentPassword.as("password")}
           />
-          {#each updatePassword.fields.currentPassword.issues() as issue}
-            <Field.Error>{issue.message}</Field.Error>
-          {/each}
+          <Field.Error
+            errors={updatePassword.fields.currentPassword.issues()}
+          />
         </Field.Field>
 
-        <Field.Field>
+        <Field.Field
+          data-invalid={fieldInvalid(
+            updatePassword.fields.newPassword.issues(),
+          )}
+        >
           <Field.Label for="new-password">New password</Field.Label>
           <Input
             id="new-password"
             autocomplete="new-password"
             {...updatePassword.fields.newPassword.as("password")}
           />
-          {#each updatePassword.fields.newPassword.issues() as issue}
-            <Field.Error>{issue.message}</Field.Error>
-          {/each}
+          <Field.Error errors={updatePassword.fields.newPassword.issues()} />
         </Field.Field>
 
         <Button type="submit" disabled={updatePassword.pending > 0}>

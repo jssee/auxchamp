@@ -2,6 +2,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Field from "$lib/components/ui/field";
   import { Input } from "$lib/components/ui/input";
+  import { fieldInvalid } from "$lib/utils";
 
   import { signIn } from "./auth.remote";
 
@@ -9,12 +10,10 @@
 </script>
 
 <form {...signIn}>
-  {#each signIn.fields.allIssues() as issue}
-    <Field.Error>{issue.message}</Field.Error>
-  {/each}
+  <Field.Error errors={signIn.fields.allIssues()} />
 
   <Field.Set>
-    <Field.Field>
+    <Field.Field data-invalid={fieldInvalid(signIn.fields.email.issues())}>
       <Field.Label for="email-{id}">Email</Field.Label>
       <Input
         id="email-{id}"
@@ -22,23 +21,17 @@
         placeholder="you@example.com"
         {...signIn.fields.email.as("email")}
       />
-      <div class="*:leading-snug">
-        {#each signIn.fields.email.issues() as issue}
-          <Field.Error>{issue.message}</Field.Error>
-        {/each}
-      </div>
+      <Field.Error errors={signIn.fields.email.issues()} />
     </Field.Field>
 
-    <Field.Field>
+    <Field.Field data-invalid={fieldInvalid(signIn.fields.password.issues())}>
       <Field.Label for="password-{id}">Password</Field.Label>
       <Input
         id="password-{id}"
         autocomplete="current-password"
         {...signIn.fields.password.as("password")}
       />
-      {#each signIn.fields.password.issues() as issue}
-        <Field.Error>{issue.message}</Field.Error>
-      {/each}
+      <Field.Error errors={signIn.fields.password.issues()} />
     </Field.Field>
 
     <Button type="submit">Sign in</Button>

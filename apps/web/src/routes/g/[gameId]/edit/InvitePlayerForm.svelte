@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Field from "$lib/components/ui/field/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
+  import { Button } from "$lib/components/ui/button";
+  import * as Field from "$lib/components/ui/field";
+  import { Input } from "$lib/components/ui/input";
+  import { fieldInvalid } from "$lib/utils";
   import { invitePlayer } from "$lib/game.remote";
 
   let { gameId }: { gameId: string } = $props();
@@ -13,9 +14,7 @@
   <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
     <Field.Field
       class="min-w-0"
-      data-invalid={invitePlayer.fields.targetUserEmail.issues()?.length
-        ? "true"
-        : undefined}
+      data-invalid={fieldInvalid(invitePlayer.fields.targetUserEmail.issues())}
     >
       <Field.Label for="invite-player-email">Invite by email</Field.Label>
       <Input

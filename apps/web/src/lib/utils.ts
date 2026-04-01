@@ -11,3 +11,8 @@ export type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
 export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "children"> : T;
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
+
+/** Returns `"true"` when issues are present, `undefined` otherwise — for `data-invalid` attrs on Field.Field. */
+export function fieldInvalid(issues: unknown[] | undefined): "true" | undefined {
+  return issues?.length ? "true" : undefined;
+}
