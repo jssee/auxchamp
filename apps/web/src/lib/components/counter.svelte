@@ -29,7 +29,7 @@
   }: Props = $props();
 
   const display = Tween.of(() => value, {
-    duration: 150,
+    duration: 200,
     easing: cubicOut,
   });
 
@@ -93,7 +93,7 @@
     aria-invalid={ariaInvalid}
     aria-labelledby={ariaLabelledby}
     {onkeydown}
-    class="min-w-8 rounded-md text-center text-sm font-medium tabular-nums select-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+    class="font-display min-w-12 rounded-md text-center text-xl font-semibold tabular-nums select-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
   >
     {Math.round(display.current)}
   </span>

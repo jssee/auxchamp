@@ -1,15 +1,11 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Button } from "$lib/components/ui/button";
   import Counter from "$lib/components/counter.svelte";
-  import * as Field from "$lib/components/ui/field/index.js";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
+  import * as Field from "$lib/components/ui/field";
+  import * as Card from "$lib/components/ui/card";
+  import { Textarea } from "$lib/components/ui/textarea";
+  import { Input } from "$lib/components/ui/input";
   import { createGame } from "$lib/game.remote";
-
-  // Form field names with `n:` prefix so SvelteKit coerces FormData strings to numbers
-  const submissionName =
-    createGame.fields.submissionWindowDays.as("number").name;
-  const votingName = createGame.fields.votingWindowDays.as("number").name;
 
   let submissionDays = $state(
     createGame.fields.submissionWindowDays.value() ?? 1,
@@ -40,43 +36,63 @@
         rows={2}
         {...createGame.fields.description.as("text")}
       />
-      <Field.Description
-        >Optional. Add context players should see before round one starts.</Field.Description
-      >
       <Field.Error errors={createGame.fields.description.issues()} />
     </Field.Field>
 
-    <div class="grid gap-4 sm:grid-cols-2">
-      <Field.Field
-        data-invalid={createGame.fields.submissionWindowDays.issues()?.length
-          ? "true"
-          : undefined}
-      >
-        <Field.Label>Submission window (days)</Field.Label>
-        <input type="hidden" name={submissionName} value={submissionDays} />
-        <Counter bind:value={submissionDays} min={1} max={14} />
-        <Field.Description
-          >How long players have to submit a track each round.</Field.Description
-        >
-        <Field.Error errors={createGame.fields.submissionWindowDays.issues()} />
-      </Field.Field>
+    <header>
+      <h3 class="tracking-tigher font-display text-xs font-medium uppercase">
+        Phase durations
+      </h3>
+      <p class="text-sm text-muted-foreground">
+        How long (in days) players have to submit and vote for each round.
+      </p>
+    </header>
 
-      <Field.Field
-        data-invalid={createGame.fields.votingWindowDays.issues()?.length
-          ? "true"
-          : undefined}
-      >
-        <Field.Label>Voting window (days)</Field.Label>
-        <input type="hidden" name={votingName} value={votingDays} />
-        <Counter bind:value={votingDays} min={1} max={14} />
-        <Field.Description
-          >How long players can vote after submissions close.</Field.Description
-        >
-        <Field.Error errors={createGame.fields.votingWindowDays.issues()} />
-      </Field.Field>
+    <div class="grid grid-cols-2 gap-4 **:justify-center">
+      <Card.Root class="has:data-invalid:border-red-500">
+        <Card.Content class="grid w-auto">
+          <Field.Field
+            data-invalid={createGame.fields.submissionWindowDays.issues()
+              ?.length
+              ? "true"
+              : undefined}
+          >
+            <Field.Label for="submissionDays">Submission</Field.Label>
+            <input
+              id="submissionDays"
+              class="visually-hidden"
+              {...createGame.fields.submissionWindowDays.as("number")}
+            />
+            <Counter bind:value={submissionDays} min={1} max={14} />
+            <Field.Error
+              errors={createGame.fields.submissionWindowDays.issues()}
+            />
+          </Field.Field>
+        </Card.Content>
+      </Card.Root>
+
+      <Card.Root class="has:data-invalid:border-red-500">
+        <Card.Content class="grid w-auto">
+          <Field.Field
+            data-invalid={createGame.fields.votingWindowDays.issues()?.length
+              ? "true"
+              : undefined}
+          >
+            <Field.Label for="votingDays">Voting</Field.Label>
+            <input
+              id="votingDays"
+              type="hidden"
+              name={createGame.fields.votingWindowDays.as("number").name}
+              value={votingDays}
+            />
+            <Counter bind:value={votingDays} min={1} max={14} />
+            <Field.Error errors={createGame.fields.votingWindowDays.issues()} />
+          </Field.Field>
+        </Card.Content>
+      </Card.Root>
     </div>
 
-    <Button type="submit" class="w-full" disabled={createGame.pending > 0}>
+    <Button type="submit" size="lg" disabled={createGame.pending > 0}>
       {createGame.pending > 0 ? "Creating..." : "Create Game"}
     </Button>
   </Field.Group>
