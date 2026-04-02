@@ -16,3 +16,12 @@ export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?:
 export function fieldInvalid(issues: unknown[] | undefined): "true" | undefined {
   return issues?.length ? "true" : undefined;
 }
+
+export function normalizeOptionalString(value: string | undefined) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
