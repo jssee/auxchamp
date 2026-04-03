@@ -13,7 +13,7 @@
   bind:ref
   data-slot="menubar-trigger"
   class={cn(
-    "flex items-center rounded-xl px-2 py-0.75 text-sm font-medium outline-hidden select-none hover:bg-muted aria-expanded:bg-muted",
+    "flex items-center rounded-2xl px-2 py-0.75 text-sm font-medium outline-hidden select-none hover:bg-muted aria-expanded:bg-muted",
     className,
   )}
   {...restProps}
