@@ -5,10 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type WithoutChildren<T> = T extends { children?: any }
+export type WithoutChild<T> = T extends { child?: unknown }
+  ? Omit<T, "child">
+  : T;
+export type WithoutChildren<T> = T extends { children?: unknown }
   ? Omit<T, "children">
   : T;
 export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
@@ -25,6 +25,8 @@ export function normalizeOptionalString(
 }
 
 /** Returns true if field has issues, undefined otherwise (for data-invalid attr). */
-export function fieldInvalid(issues: string[] | undefined): true | undefined {
+export function fieldInvalid(
+  issues: readonly unknown[] | undefined | null,
+): true | undefined {
   return issues && issues.length > 0 ? true : undefined;
 }

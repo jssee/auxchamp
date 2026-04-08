@@ -3,6 +3,8 @@ import { createRouterClient } from "@orpc/server";
 import dotenv from "dotenv";
 import { and, eq } from "drizzle-orm";
 
+import type { Context } from "./context";
+
 dotenv.config({
   path: new URL("../../../apps/web/.env", import.meta.url).pathname,
 });
@@ -29,10 +31,37 @@ afterEach(async () => {
   createdUserIds.clear();
 });
 
+function createTestContext(userId?: string): Context {
+  return (
+    userId
+      ? {
+          session: {
+            user: {
+              id: userId,
+            },
+          },
+        }
+      : { session: null }
+  ) as Context;
+}
+
+function expectPresent<T>(
+  value: T | null | undefined,
+  message = "Expected value to be present.",
+): T {
+  expect(value).toBeDefined();
+
+  if (value == null) {
+    throw new Error(message);
+  }
+
+  return value;
+}
+
 test("top-level getPublicProfile remains accessible without a session", async () => {
   const profileOwner = await createTestUser("Alice");
   const api = createRouterClient(appRouter, {
-    context: () => ({}) as any,
+    context: () => createTestContext(),
   });
 
   await expect(
@@ -48,14 +77,7 @@ test("top-level getPublicProfile remains accessible without a session", async ()
 test("top-level saveSubmission rejects non-track Spotify URLs at the procedure boundary", async () => {
   const { gameId, submitter } = await setupActiveGame();
   const api = createRouterClient(appRouter, {
-    context: () =>
-      ({
-        session: {
-          user: {
-            id: submitter.id,
-          },
-        },
-      }) as any,
+    context: () => createTestContext(submitter.id),
   });
 
   await expect(
@@ -110,7 +132,11 @@ async function setupActiveGame() {
 
   await startGame(creator.id, { gameId: draftGame.gameId });
 
-  return { gameId: draftGame.gameId, creator, submitter: players[0]! };
+  return {
+    gameId: draftGame.gameId,
+    creator,
+    submitter: expectPresent(players[0], "Expected submitter."),
+  };
 }
 
 async function createTestUser(name?: string) {

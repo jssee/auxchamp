@@ -11,7 +11,7 @@
   /** Only trust relative paths that start with a single slash. */
   const redirectTo = $derived.by(() => {
     const raw = page.url.searchParams.get("redirectTo");
-    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+    if (!raw?.startsWith("/") || raw.startsWith("//")) return null;
     return raw;
   });
 

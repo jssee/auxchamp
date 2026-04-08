@@ -364,13 +364,17 @@ export async function saveSubmission(
       })
       .returning();
 
+    if (!saved) {
+      throw new Error("Failed to persist submission.");
+    }
+
     return {
-      submissionId: saved!.id,
+      submissionId: saved.id,
       playerId: activePlayer.id,
       roundId: submittingRound.id,
       gameId: input.gameId,
-      spotifyTrackUrl: saved!.spotifyTrackUrl,
-      note: saved!.note,
+      spotifyTrackUrl: saved.spotifyTrackUrl,
+      note: saved.note,
     };
   });
 }
@@ -553,11 +557,17 @@ export async function advanceRound(
       });
     }
 
+    if (!gameRow) {
+      throw new Error(
+        "Invariant violation: creator player exists without a game row.",
+      );
+    }
+
     if (activeRound.phase === "submitting") {
       return advanceSubmittingToVoting(
         tx,
         activeRound,
-        gameRow!.votingWindowDays,
+        gameRow.votingWindowDays,
       );
     }
 
@@ -565,7 +575,7 @@ export async function advanceRound(
       tx,
       input.gameId,
       activeRound,
-      gameRow!.submissionWindowDays,
+      gameRow.submissionWindowDays,
     );
   });
 }

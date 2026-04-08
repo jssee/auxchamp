@@ -38,6 +38,34 @@ afterEach(async () => {
   createdUserIds.clear();
 });
 
+function expectPresent<T>(
+  value: T | null | undefined,
+  message = "Expected value to be present.",
+): T {
+  expect(value).toBeDefined();
+
+  if (value == null) {
+    throw new Error(message);
+  }
+
+  return value;
+}
+
+function at<T>(
+  items: readonly T[],
+  index: number,
+  message = `Expected item at index ${index}.`,
+): T {
+  const item = items[index];
+  expect(item).toBeDefined();
+
+  if (item === undefined) {
+    throw new Error(message);
+  }
+
+  return item;
+}
+
 async function expectOrpcError(
   promise: Promise<unknown>,
   expected: { code: string; status: number },
@@ -405,24 +433,33 @@ test("startGame activates a valid draft and opens round 1", async () => {
 
   const result = await startGame(creator.id, { gameId });
 
-  const [startedGame] = await db.select().from(game).where(eq(game.id, gameId));
-  const [firstRound] = await db
+  const [startedGameRow] = await db
+    .select()
+    .from(game)
+    .where(eq(game.id, gameId));
+  const [firstRoundRow] = await db
     .select()
     .from(round)
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+  const startedGame = expectPresent(
+    startedGameRow,
+    "Expected started game row.",
+  );
+  const firstRound = expectPresent(firstRoundRow, "Expected first round row.");
 
   expect(result).toMatchObject({ gameId, state: "active" });
   expect(startedGame).toMatchObject({ state: "active" });
-  expect(startedGame!.startedAt).toBeInstanceOf(Date);
+  expect(startedGame.startedAt).toBeInstanceOf(Date);
   expect(firstRound).toMatchObject({ phase: "submitting" });
-  expect(firstRound!.submissionOpensAt).toBeInstanceOf(Date);
-  expect(firstRound!.submissionClosesAt).toBeInstanceOf(Date);
+  expect(firstRound.submissionOpensAt).toBeInstanceOf(Date);
+  expect(firstRound.submissionClosesAt).toBeInstanceOf(Date);
 });
 
 test("startGame rejects non-creator", async () => {
   const { gameId, players } = await setupLobby();
+  const player = at(players, 0, "Expected non-creator player.");
 
-  await expectOrpcError(startGame(players[0]!.id, { gameId }), {
+  await expectOrpcError(startGame(player.id, { gameId }), {
     code: "FORBIDDEN",
     status: 403,
   });
@@ -461,8 +498,9 @@ test("startGame rejects non-draft game", async () => {
 
 test("saveSubmission creates a submission for the active round", async () => {
   const { gameId, players } = await setupActiveGame();
+  const submittingPlayer = at(players, 0, "Expected submitting player.");
 
-  const result = await saveSubmission(players[0]!.id, {
+  const result = await saveSubmission(submittingPlayer.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/abc123",
     note: "Great opener",
@@ -487,13 +525,14 @@ test("saveSubmission creates a submission for the active round", async () => {
 
 test("saveSubmission updates an existing submission", async () => {
   const { gameId, players } = await setupActiveGame();
+  const submittingPlayer = at(players, 0, "Expected submitting player.");
 
-  await saveSubmission(players[0]!.id, {
+  await saveSubmission(submittingPlayer.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/first",
   });
 
-  const result = await saveSubmission(players[0]!.id, {
+  const result = await saveSubmission(submittingPlayer.id, {
     gameId,
     spotifyTrackUrl: "https://open.spotify.com/track/revised",
     note: "Changed my mind",
@@ -527,6 +566,7 @@ test("saveSubmission rejects non-active player", async () => {
 
 test("saveSubmission rejects when no round is accepting submissions", async () => {
   const { gameId, players } = await setupActiveGame();
+  const submittingPlayer = at(players, 0, "Expected submitting player.");
 
   // Close the submission round
   await db
@@ -535,7 +575,7 @@ test("saveSubmission rejects when no round is accepting submissions", async () =
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
 
   await expectOrpcError(
-    saveSubmission(players[0]!.id, {
+    saveSubmission(submittingPlayer.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/late",
     }),
@@ -545,6 +585,7 @@ test("saveSubmission rejects when no round is accepting submissions", async () =
 
 test("saveSubmission rejects when submission window has closed", async () => {
   const { gameId, players } = await setupActiveGame();
+  const submittingPlayer = at(players, 0, "Expected submitting player.");
 
   // Set submissionClosesAt to the past
   await db
@@ -553,7 +594,7 @@ test("saveSubmission rejects when submission window has closed", async () => {
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
 
   await expectOrpcError(
-    saveSubmission(players[0]!.id, {
+    saveSubmission(submittingPlayer.id, {
       gameId,
       spotifyTrackUrl: "https://open.spotify.com/track/expired",
     }),
@@ -565,11 +606,16 @@ test("saveSubmission rejects when submission window has closed", async () => {
 
 test("saveBallot creates a ballot with 3 stars during voting", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   // players[0] is allPlayers[1], so their submission is submissionIds[1].
   // Vote for the other three: creator (0), players[1] (2), players[2] (3).
-  const targets = [submissionIds[0]!, submissionIds[2]!, submissionIds[3]!];
-  const result = await saveBallot(players[0]!.id, {
+  const targets = [
+    at(submissionIds, 0),
+    at(submissionIds, 2),
+    at(submissionIds, 3),
+  ];
+  const result = await saveBallot(votingPlayer.id, {
     gameId,
     submissionIds: targets,
   });
@@ -589,17 +635,26 @@ test("saveBallot creates a ballot with 3 stars during voting", async () => {
 
 test("saveBallot updates an existing ballot by replacing stars", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   // players[0]'s submission is submissionIds[1]. Vote for the other three.
-  const first = await saveBallot(players[0]!.id, {
+  const first = await saveBallot(votingPlayer.id, {
     gameId,
-    submissionIds: [submissionIds[0]!, submissionIds[2]!, submissionIds[3]!],
+    submissionIds: [
+      at(submissionIds, 0),
+      at(submissionIds, 2),
+      at(submissionIds, 3),
+    ],
   });
 
   // Re-vote with the same targets in a different order to prove replacement.
-  const second = await saveBallot(players[0]!.id, {
+  const second = await saveBallot(votingPlayer.id, {
     gameId,
-    submissionIds: [submissionIds[3]!, submissionIds[0]!, submissionIds[2]!],
+    submissionIds: [
+      at(submissionIds, 3),
+      at(submissionIds, 0),
+      at(submissionIds, 2),
+    ],
   });
 
   expect(second.ballotId).toBe(first.ballotId);
@@ -618,7 +673,11 @@ test("saveBallot rejects non-active player", async () => {
   await expectOrpcError(
     saveBallot(outsider.id, {
       gameId,
-      submissionIds: [submissionIds[0]!, submissionIds[1]!, submissionIds[2]!],
+      submissionIds: [
+        at(submissionIds, 0),
+        at(submissionIds, 1),
+        at(submissionIds, 2),
+      ],
     }),
     { code: "FORBIDDEN", status: 403 },
   );
@@ -626,10 +685,11 @@ test("saveBallot rejects non-active player", async () => {
 
 test("saveBallot rejects when no round is in voting phase", async () => {
   const { gameId, players } = await setupActiveGame();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   // Round is still in "submitting", not "voting".
   await expectOrpcError(
-    saveBallot(players[0]!.id, {
+    saveBallot(votingPlayer.id, {
       gameId,
       submissionIds: ["fake1", "fake2", "fake3"],
     }),
@@ -639,12 +699,17 @@ test("saveBallot rejects when no round is in voting phase", async () => {
 
 test("saveBallot rejects self-voting", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   // Player 0's own submission is at index 0.
   await expectOrpcError(
-    saveBallot(players[0]!.id, {
+    saveBallot(votingPlayer.id, {
       gameId,
-      submissionIds: [submissionIds[0]!, submissionIds[1]!, submissionIds[2]!],
+      submissionIds: [
+        at(submissionIds, 0),
+        at(submissionIds, 1),
+        at(submissionIds, 2),
+      ],
     }),
     { code: "BAD_REQUEST", status: 400 },
   );
@@ -652,11 +717,16 @@ test("saveBallot rejects self-voting", async () => {
 
 test("saveBallot rejects duplicate submission IDs", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   await expectOrpcError(
-    saveBallot(players[0]!.id, {
+    saveBallot(votingPlayer.id, {
       gameId,
-      submissionIds: [submissionIds[1]!, submissionIds[1]!, submissionIds[2]!],
+      submissionIds: [
+        at(submissionIds, 1),
+        at(submissionIds, 1),
+        at(submissionIds, 2),
+      ],
     }),
     { code: "BAD_REQUEST", status: 400 },
   );
@@ -664,9 +734,10 @@ test("saveBallot rejects duplicate submission IDs", async () => {
 
 test("saveBallot rejects submissions from a different round", async () => {
   const { gameId, players } = await setupVotingRound();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   await expectOrpcError(
-    saveBallot(players[0]!.id, {
+    saveBallot(votingPlayer.id, {
       gameId,
       submissionIds: ["nonexistent1", "nonexistent2", "nonexistent3"],
     }),
@@ -676,6 +747,7 @@ test("saveBallot rejects submissions from a different round", async () => {
 
 test("saveBallot rejects when voting window has closed", async () => {
   const { gameId, players, submissionIds } = await setupVotingRound();
+  const votingPlayer = at(players, 0, "Expected voting player.");
 
   // Set votingClosesAt to the past.
   await db
@@ -684,9 +756,13 @@ test("saveBallot rejects when voting window has closed", async () => {
     .where(and(eq(round.gameId, gameId), eq(round.phase, "voting")));
 
   await expectOrpcError(
-    saveBallot(players[0]!.id, {
+    saveBallot(votingPlayer.id, {
       gameId,
-      submissionIds: [submissionIds[1]!, submissionIds[2]!, submissionIds[3]!],
+      submissionIds: [
+        at(submissionIds, 1),
+        at(submissionIds, 2),
+        at(submissionIds, 3),
+      ],
     }),
     { code: "PRECONDITION_FAILED", status: 412 },
   );
@@ -706,14 +782,15 @@ test("advanceRound transitions submitting to voting", async () => {
     gameCompleted: false,
   });
 
-  const [advanced] = await db
+  const [advancedRound] = await db
     .select()
     .from(round)
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+  const advanced = expectPresent(advancedRound, "Expected advanced round row.");
 
   expect(advanced).toMatchObject({ phase: "voting" });
-  expect(advanced!.votingOpensAt).toBeInstanceOf(Date);
-  expect(advanced!.votingClosesAt).toBeInstanceOf(Date);
+  expect(advanced.votingOpensAt).toBeInstanceOf(Date);
+  expect(advanced.votingClosesAt).toBeInstanceOf(Date);
 });
 
 test("advanceRound transitions voting to scored and opens next round", async () => {
@@ -721,40 +798,41 @@ test("advanceRound transitions voting to scored and opens next round", async () 
   await startGame(creator.id, { gameId });
 
   // Submit and advance to voting, then to scored.
-  for (const p of [creator, ...players]) {
-    await saveSubmission(p.id, {
+  for (const currentPlayer of [creator, ...players]) {
+    await saveSubmission(currentPlayer.id, {
       gameId,
-      spotifyTrackUrl: `https://open.spotify.com/track/${p.id}`,
+      spotifyTrackUrl: `https://open.spotify.com/track/${currentPlayer.id}`,
     });
   }
   await advanceRound(creator.id, { gameId }); // submitting → voting
 
   // Cast ballots (each player votes for 3 others' submissions).
   const allPlayers = [creator, ...players];
+  const [roundRow] = await db
+    .select({ id: round.id })
+    .from(round)
+    .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+  const firstRound = expectPresent(roundRow, "Expected first round row.");
   const submissions = await db
     .select({ id: submission.id, playerId: submission.playerId })
     .from(submission)
-    .where(
-      eq(
-        submission.roundId,
-        (
-          await db
-            .select({ id: round.id })
-            .from(round)
-            .where(and(eq(round.gameId, gameId), eq(round.number, 1)))
-        )[0]!.id,
-      ),
-    );
+    .where(eq(submission.roundId, firstRound.id));
 
   for (const voter of allPlayers) {
-    const [voterPlayer] = await db
+    const [voterPlayerRow] = await db
       .select({ id: player.id })
       .from(player)
       .where(and(eq(player.gameId, gameId), eq(player.userId, voter.id)));
+    const voterPlayer = expectPresent(
+      voterPlayerRow,
+      "Expected voter player row.",
+    );
     const targets = submissions
-      .filter((s) => s.playerId !== voterPlayer!.id)
+      .filter(
+        (currentSubmission) => currentSubmission.playerId !== voterPlayer.id,
+      )
       .slice(0, 3)
-      .map((s) => s.id);
+      .map((currentSubmission) => currentSubmission.id);
     await saveBallot(voter.id, { gameId, submissionIds: targets });
   }
 
@@ -785,34 +863,41 @@ test("advanceRound completes the game when no more rounds remain", async () => {
   await startGame(creator.id, { gameId });
 
   // Submit, advance to voting.
-  for (const p of [creator, ...players]) {
-    await saveSubmission(p.id, {
+  for (const currentPlayer of [creator, ...players]) {
+    await saveSubmission(currentPlayer.id, {
       gameId,
-      spotifyTrackUrl: `https://open.spotify.com/track/${p.id}`,
+      spotifyTrackUrl: `https://open.spotify.com/track/${currentPlayer.id}`,
     });
   }
   await advanceRound(creator.id, { gameId });
 
   // Cast ballots.
   const allPlayers = [creator, ...players];
-  const [r1] = await db
+  const [roundRow] = await db
     .select({ id: round.id })
     .from(round)
     .where(and(eq(round.gameId, gameId), eq(round.number, 1)));
+  const firstRound = expectPresent(roundRow, "Expected first round row.");
   const submissions = await db
     .select({ id: submission.id, playerId: submission.playerId })
     .from(submission)
-    .where(eq(submission.roundId, r1!.id));
+    .where(eq(submission.roundId, firstRound.id));
 
   for (const voter of allPlayers) {
-    const [voterPlayer] = await db
+    const [voterPlayerRow] = await db
       .select({ id: player.id })
       .from(player)
       .where(and(eq(player.gameId, gameId), eq(player.userId, voter.id)));
+    const voterPlayer = expectPresent(
+      voterPlayerRow,
+      "Expected voter player row.",
+    );
     const targets = submissions
-      .filter((s) => s.playerId !== voterPlayer!.id)
+      .filter(
+        (currentSubmission) => currentSubmission.playerId !== voterPlayer.id,
+      )
       .slice(0, 3)
-      .map((s) => s.id);
+      .map((currentSubmission) => currentSubmission.id);
     await saveBallot(voter.id, { gameId, submissionIds: targets });
   }
 
@@ -825,18 +910,23 @@ test("advanceRound completes the game when no more rounds remain", async () => {
     gameCompleted: true,
   });
 
-  const [completedGame] = await db
+  const [completedGameRow] = await db
     .select()
     .from(game)
     .where(eq(game.id, gameId));
+  const completedGame = expectPresent(
+    completedGameRow,
+    "Expected completed game row.",
+  );
   expect(completedGame).toMatchObject({ state: "completed" });
-  expect(completedGame!.completedAt).toBeInstanceOf(Date);
+  expect(completedGame.completedAt).toBeInstanceOf(Date);
 });
 
 test("advanceRound rejects non-creator", async () => {
   const { gameId, players } = await setupActiveGame();
+  const player = at(players, 0, "Expected non-creator player.");
 
-  await expectOrpcError(advanceRound(players[0]!.id, { gameId }), {
+  await expectOrpcError(advanceRound(player.id, { gameId }), {
     code: "FORBIDDEN",
     status: 403,
   });
@@ -906,7 +996,8 @@ async function setupVotingRound() {
   const submissionIds: string[] = [];
 
   for (let i = 0; i < allPlayers.length; i++) {
-    const result = await saveSubmission(allPlayers[i]!.id, {
+    const currentPlayer = at(allPlayers, i, `Expected player ${i}.`);
+    const result = await saveSubmission(currentPlayer.id, {
       gameId: lobby.gameId,
       spotifyTrackUrl: `https://open.spotify.com/track/track${i}`,
     });
