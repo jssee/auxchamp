@@ -35,15 +35,25 @@ import {
  */
 export const contract = {
   health: oc.output(healthOutputSchema),
-  getPublicProfile: oc.input(getPublicProfileInputSchema).output(getPublicProfileOutputSchema),
+  getPublicProfile: oc
+    .input(getPublicProfileInputSchema)
+    .output(getPublicProfileOutputSchema),
   createGame: oc.input(createGameInputSchema).output(createGameOutputSchema),
   addRound: oc.input(addRoundInputSchema).output(addRoundOutputSchema),
-  invitePlayer: oc.input(invitePlayerInputSchema).output(invitePlayerOutputSchema),
-  acceptInvite: oc.input(acceptInviteInputSchema).output(acceptInviteOutputSchema),
+  invitePlayer: oc
+    .input(invitePlayerInputSchema)
+    .output(invitePlayerOutputSchema),
+  acceptInvite: oc
+    .input(acceptInviteInputSchema)
+    .output(acceptInviteOutputSchema),
   startGame: oc.input(startGameInputSchema).output(startGameOutputSchema),
-  saveSubmission: oc.input(saveSubmissionInputSchema).output(saveSubmissionOutputSchema),
+  saveSubmission: oc
+    .input(saveSubmissionInputSchema)
+    .output(saveSubmissionOutputSchema),
   saveBallot: oc.input(saveBallotInputSchema).output(saveBallotOutputSchema),
-  advanceRound: oc.input(advanceRoundInputSchema).output(advanceRoundOutputSchema),
+  advanceRound: oc
+    .input(advanceRoundInputSchema)
+    .output(advanceRoundOutputSchema),
   getGame: oc.input(getGameInputSchema).output(getGameOutputSchema),
   getRound: oc.input(getRoundInputSchema).output(getRoundOutputSchema),
 };

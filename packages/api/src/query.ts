@@ -3,7 +3,13 @@ import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { normalizeUsername } from "@auxchamp/auth/utils";
 import { db } from "@auxchamp/db";
 import { user } from "@auxchamp/db/schema/auth";
-import { ballot, game, round, star, submission } from "@auxchamp/db/schema/game";
+import {
+  ballot,
+  game,
+  round,
+  star,
+  submission,
+} from "@auxchamp/db/schema/game";
 import type { CapabilityContext } from "./capability";
 import { getAllowedActions } from "./capability";
 import type {
@@ -27,7 +33,12 @@ function submissionsWithStarCounts(roundIds: string[]) {
     .from(submission)
     .leftJoin(star, eq(star.submissionId, submission.id))
     .where(inArray(submission.roundId, roundIds))
-    .groupBy(submission.id, submission.roundId, submission.playerId, submission.spotifyTrackUrl);
+    .groupBy(
+      submission.id,
+      submission.roundId,
+      submission.playerId,
+      submission.spotifyTrackUrl,
+    );
 }
 
 /** Build capability context and return allowed actions. */
@@ -35,7 +46,9 @@ function computeActions(ctx: Omit<CapabilityContext, "now">) {
   return getAllowedActions({ ...ctx, now: new Date() });
 }
 
-export async function getPublicProfile(username: string): Promise<GetPublicProfileOutput> {
+export async function getPublicProfile(
+  username: string,
+): Promise<GetPublicProfileOutput> {
   const profile = await db.query.user.findFirst({
     where: eq(user.username, normalizeUsername(username)),
     columns: {
@@ -51,7 +64,10 @@ export async function getPublicProfile(username: string): Promise<GetPublicProfi
   return profile ?? null;
 }
 
-export async function getGame(actorUserId: string, gameId: string): Promise<GetGameOutput> {
+export async function getGame(
+  actorUserId: string,
+  gameId: string,
+): Promise<GetGameOutput> {
   const row = await db.query.game.findFirst({
     where: eq(game.id, gameId),
     with: {
@@ -113,7 +129,8 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
 
   // Active round is needed for capability context but not returned.
   const activeRound =
-    row.rounds.find((r) => r.phase === "submitting" || r.phase === "voting") ?? null;
+    row.rounds.find((r) => r.phase === "submitting" || r.phase === "voting") ??
+    null;
 
   // Round results and standings for scored rounds.
   const scoredRounds = row.rounds.filter((r) => r.phase === "scored");
@@ -140,7 +157,10 @@ export async function getGame(actorUserId: string, gameId: string): Promise<GetG
     // Derive cumulative standings from the same data (no extra query).
     const starsByPlayer = new Map<string, number>();
     for (const s of rows) {
-      starsByPlayer.set(s.playerId, (starsByPlayer.get(s.playerId) ?? 0) + s.starCount);
+      starsByPlayer.set(
+        s.playerId,
+        (starsByPlayer.get(s.playerId) ?? 0) + s.starCount,
+      );
     }
     standings = [...starsByPlayer.entries()]
       .map(([playerId, totalStars]) => ({ playerId, totalStars }))
@@ -222,7 +242,8 @@ export async function getRound(
 
   if (!gameRow) return null;
 
-  const actorPlayer = gameRow.players.find((p) => p.userId === actorUserId) ?? null;
+  const actorPlayer =
+    gameRow.players.find((p) => p.userId === actorUserId) ?? null;
   if (!actorPlayer) return null;
 
   // Load the requested round.
@@ -252,15 +273,26 @@ export async function getRound(
 
   if (roundRow.phase === "submitting") {
     const sub = await db.query.submission.findFirst({
-      where: and(eq(submission.roundId, roundId), eq(submission.playerId, actorPlayer.id)),
-      columns: { id: true, spotifyTrackUrl: true, note: true, submittedAt: true },
+      where: and(
+        eq(submission.roundId, roundId),
+        eq(submission.playerId, actorPlayer.id),
+      ),
+      columns: {
+        id: true,
+        spotifyTrackUrl: true,
+        note: true,
+        submittedAt: true,
+      },
     });
     actorSubmission = sub ?? null;
   }
 
   if (roundRow.phase === "voting") {
     const ballotRow = await db.query.ballot.findFirst({
-      where: and(eq(ballot.roundId, roundId), eq(ballot.playerId, actorPlayer.id)),
+      where: and(
+        eq(ballot.roundId, roundId),
+        eq(ballot.playerId, actorPlayer.id),
+      ),
       columns: { id: true },
       with: { stars: { columns: { submissionId: true } } },
     });
@@ -300,14 +332,17 @@ export async function getRound(
 
   // Only active rounds (submitting/voting) produce round-relevant actions.
   const activeRoundPhase =
-    roundRow.phase === "submitting" || roundRow.phase === "voting" ? roundRow.phase : null;
+    roundRow.phase === "submitting" || roundRow.phase === "voting"
+      ? roundRow.phase
+      : null;
 
   const actions = computeActions({
     gameState: gameRow.state,
     activeRoundPhase,
     actorRole: actorPlayer.role,
     actorStatus: actorPlayer.status,
-    activePlayerCount: gameRow.players.filter((p) => p.status === "active").length,
+    activePlayerCount: gameRow.players.filter((p) => p.status === "active")
+      .length,
     roundCount: gameRow.rounds.length,
     submissionClosesAt: roundRow.submissionClosesAt,
     votingClosesAt: roundRow.votingClosesAt,

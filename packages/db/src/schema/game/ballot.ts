@@ -24,7 +24,10 @@ export const ballot = pgTable(
   (table) => [
     index("ballot_round_id_idx").on(table.roundId),
     index("ballot_player_id_idx").on(table.playerId),
-    unique("ballot_round_id_player_id_unique").on(table.roundId, table.playerId),
+    unique("ballot_round_id_player_id_unique").on(
+      table.roundId,
+      table.playerId,
+    ),
   ],
 );
 

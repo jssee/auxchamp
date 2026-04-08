@@ -1,5 +1,12 @@
 import { relations, sql } from "drizzle-orm";
-import { check, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  check,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { player } from "./player";
 import { round } from "./round";
@@ -24,8 +31,14 @@ export const game = pgTable(
       .notNull(),
   },
   (table) => [
-    check("game_submission_window_days_positive", sql`${table.submissionWindowDays} > 0`),
-    check("game_voting_window_days_positive", sql`${table.votingWindowDays} > 0`),
+    check(
+      "game_submission_window_days_positive",
+      sql`${table.submissionWindowDays} > 0`,
+    ),
+    check(
+      "game_voting_window_days_positive",
+      sql`${table.votingWindowDays} > 0`,
+    ),
   ],
 );
 

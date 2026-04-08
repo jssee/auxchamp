@@ -19,7 +19,10 @@ export const star = pgTable(
   (table) => [
     index("star_ballot_id_idx").on(table.ballotId),
     index("star_submission_id_idx").on(table.submissionId),
-    unique("star_ballot_id_submission_id_unique").on(table.ballotId, table.submissionId),
+    unique("star_ballot_id_submission_id_unique").on(
+      table.ballotId,
+      table.submissionId,
+    ),
   ],
 );
 

@@ -37,25 +37,31 @@ export const addRound = form(addRoundInputSchema, async (input, issue) => {
   }
 });
 
-export const invitePlayer = form(invitePlayerInputSchema, async (input, issue) => {
-  const api = createApi(getRequestEvent().request);
+export const invitePlayer = form(
+  invitePlayerInputSchema,
+  async (input, issue) => {
+    const api = createApi(getRequestEvent().request);
 
-  try {
-    return await api.invitePlayer(input);
-  } catch (thrown) {
-    rethrowAsIssue(thrown, issue.targetUserEmail("Unable to invite player."));
-  }
-});
+    try {
+      return await api.invitePlayer(input);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.targetUserEmail("Unable to invite player."));
+    }
+  },
+);
 
-export const acceptInvite = form(acceptInviteInputSchema, async (input, issue) => {
-  const api = createApi(getRequestEvent().request);
+export const acceptInvite = form(
+  acceptInviteInputSchema,
+  async (input, issue) => {
+    const api = createApi(getRequestEvent().request);
 
-  try {
-    return await api.acceptInvite(input);
-  } catch (thrown) {
-    rethrowAsIssue(thrown, issue.gameId("Unable to accept invite."));
-  }
-});
+    try {
+      return await api.acceptInvite(input);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.gameId("Unable to accept invite."));
+    }
+  },
+);
 
 export const startGame = form(startGameInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
@@ -68,15 +74,21 @@ export const startGame = form(startGameInputSchema, async (input, issue) => {
   }
 });
 
-export const saveSubmission = form(saveSubmissionInputSchema, async (input, issue) => {
-  const api = createApi(getRequestEvent().request);
+export const saveSubmission = form(
+  saveSubmissionInputSchema,
+  async (input, issue) => {
+    const api = createApi(getRequestEvent().request);
 
-  try {
-    return await api.saveSubmission(input);
-  } catch (thrown) {
-    rethrowAsIssue(thrown, issue.spotifyTrackUrl("Unable to submit this track right now."));
-  }
-});
+    try {
+      return await api.saveSubmission(input);
+    } catch (thrown) {
+      rethrowAsIssue(
+        thrown,
+        issue.spotifyTrackUrl("Unable to submit this track right now."),
+      );
+    }
+  },
+);
 
 export const saveBallot = form(saveBallotInputSchema, async (input, issue) => {
   const api = createApi(getRequestEvent().request);
@@ -88,12 +100,15 @@ export const saveBallot = form(saveBallotInputSchema, async (input, issue) => {
   }
 });
 
-export const advanceRound = form(advanceRoundInputSchema, async (input, issue) => {
-  const api = createApi(getRequestEvent().request);
+export const advanceRound = form(
+  advanceRoundInputSchema,
+  async (input, issue) => {
+    const api = createApi(getRequestEvent().request);
 
-  try {
-    return await api.advanceRound(input);
-  } catch (thrown) {
-    rethrowAsIssue(thrown, issue.gameId("Unable to advance round."));
-  }
-});
+    try {
+      return await api.advanceRound(input);
+    } catch (thrown) {
+      rethrowAsIssue(thrown, issue.gameId("Unable to advance round."));
+    }
+  },
+);

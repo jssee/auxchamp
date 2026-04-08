@@ -40,9 +40,18 @@ function windowOpen(closesAt: Date | null, now: Date) {
 /** Each action paired with the predicate that enables it. */
 const rules: [Action, (ctx: CapabilityContext) => boolean][] = [
   ["accept_invite", (ctx) => ctx.actorStatus === "invited"],
-  ["edit_game", (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator"],
-  ["edit_future_round", (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator"],
-  ["invite_player", (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator"],
+  [
+    "edit_game",
+    (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator",
+  ],
+  [
+    "edit_future_round",
+    (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator",
+  ],
+  [
+    "invite_player",
+    (ctx) => ctx.gameState === "draft" && ctx.actorRole === "creator",
+  ],
   [
     "start_game",
     (ctx) =>
@@ -51,7 +60,10 @@ const rules: [Action, (ctx: CapabilityContext) => boolean][] = [
       ctx.roundCount >= 1 &&
       ctx.activePlayerCount >= 4,
   ],
-  ["leave_game", (ctx) => ctx.gameState === "active" && ctx.actorStatus === "active"],
+  [
+    "leave_game",
+    (ctx) => ctx.gameState === "active" && ctx.actorStatus === "active",
+  ],
   [
     "submit_song",
     (ctx) =>
@@ -71,7 +83,9 @@ const rules: [Action, (ctx: CapabilityContext) => boolean][] = [
   [
     "transition_round",
     (ctx) =>
-      ctx.gameState === "active" && ctx.actorRole === "creator" && ctx.activeRoundPhase !== null,
+      ctx.gameState === "active" &&
+      ctx.actorRole === "creator" &&
+      ctx.activeRoundPhase !== null,
   ],
 ];
 

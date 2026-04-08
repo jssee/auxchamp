@@ -31,7 +31,10 @@ export const updateProfile = form(updateProfileSchema, async (data, issue) => {
     console.error(err);
 
     const code = getAuthErrorCode(err);
-    const message = getAuthErrorMessage(err, "Profile update failed. Please try again.");
+    const message = getAuthErrorMessage(
+      err,
+      "Profile update failed. Please try again.",
+    );
 
     if (code && USERNAME_AUTH_ERROR_CODES.has(code)) {
       invalid(issue.username(message));
@@ -73,7 +76,10 @@ export const updateEmail = form(changeEmailSchema, async (data, issue) => {
     console.error(err);
 
     const code = getAuthErrorCode(err);
-    const message = getAuthErrorMessage(err, "Email update failed. Please try again.");
+    const message = getAuthErrorMessage(
+      err,
+      "Email update failed. Please try again.",
+    );
 
     if (code && EMAIL_AUTH_ERROR_CODES.has(code)) {
       invalid(issue.email(message));
@@ -102,7 +108,9 @@ export const updatePassword = form(changePasswordSchema, async (data) => {
     });
   } catch (err) {
     console.error(err);
-    invalid(getAuthErrorMessage(err, "Password update failed. Please try again."));
+    invalid(
+      getAuthErrorMessage(err, "Password update failed. Please try again."),
+    );
   }
 
   return {

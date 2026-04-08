@@ -18,7 +18,9 @@ function ctx(overrides: Partial<CapabilityContext> = {}): CapabilityContext {
 
 describe("getAllowedActions", () => {
   test("returns empty set for non-members", () => {
-    const actions = getAllowedActions(ctx({ actorRole: null, actorStatus: null }));
+    const actions = getAllowedActions(
+      ctx({ actorRole: null, actorStatus: null }),
+    );
     expect(actions.length).toBe(0);
   });
 
@@ -107,7 +109,9 @@ describe("getAllowedActions", () => {
 
   describe("active game — submitting phase", () => {
     test("active player can submit", () => {
-      const actions = getAllowedActions(ctx({ activeRoundPhase: "submitting" }));
+      const actions = getAllowedActions(
+        ctx({ activeRoundPhase: "submitting" }),
+      );
       expect(actions.includes("submit_song")).toBe(true);
       expect(actions.includes("leave_game")).toBe(true);
     });
@@ -121,7 +125,9 @@ describe("getAllowedActions", () => {
     });
 
     test("active player cannot vote during submitting phase", () => {
-      const actions = getAllowedActions(ctx({ activeRoundPhase: "submitting" }));
+      const actions = getAllowedActions(
+        ctx({ activeRoundPhase: "submitting" }),
+      );
       expect(actions.includes("cast_ballot")).toBe(false);
     });
 
@@ -149,7 +155,9 @@ describe("getAllowedActions", () => {
 
     test("active player cannot vote after window closes", () => {
       const past = new Date(Date.now() - 1000);
-      const actions = getAllowedActions(ctx({ activeRoundPhase: "voting", votingClosesAt: past }));
+      const actions = getAllowedActions(
+        ctx({ activeRoundPhase: "voting", votingClosesAt: past }),
+      );
       expect(actions.includes("cast_ballot")).toBe(false);
     });
 
@@ -161,7 +169,9 @@ describe("getAllowedActions", () => {
 
   describe("completed game", () => {
     test("no actions available", () => {
-      const actions = getAllowedActions(ctx({ gameState: "completed", activeRoundPhase: null }));
+      const actions = getAllowedActions(
+        ctx({ gameState: "completed", activeRoundPhase: null }),
+      );
       expect(actions.includes("submit_song")).toBe(false);
       expect(actions.includes("cast_ballot")).toBe(false);
       expect(actions.includes("transition_round")).toBe(false);

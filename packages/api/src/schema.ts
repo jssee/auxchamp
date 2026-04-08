@@ -21,7 +21,9 @@ export type HealthOutput = v.InferOutput<typeof healthOutputSchema>;
 export const getPublicProfileInputSchema = v.object({
   username: v.pipe(v.string(), v.minLength(1, "Username is required")),
 });
-export type GetPublicProfileInput = v.InferOutput<typeof getPublicProfileInputSchema>;
+export type GetPublicProfileInput = v.InferOutput<
+  typeof getPublicProfileInputSchema
+>;
 
 export const getPublicProfileOutputSchema = v.nullable(
   v.object({
@@ -33,7 +35,9 @@ export const getPublicProfileOutputSchema = v.nullable(
     createdAt: v.date(),
   }),
 );
-export type GetPublicProfileOutput = v.InferOutput<typeof getPublicProfileOutputSchema>;
+export type GetPublicProfileOutput = v.InferOutput<
+  typeof getPublicProfileOutputSchema
+>;
 
 export const createGameInputSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, "Name is required")),
@@ -114,7 +118,9 @@ export const saveSubmissionInputSchema = v.object({
   ),
   note: v.optional(v.string()),
 });
-export type SaveSubmissionInput = v.InferOutput<typeof saveSubmissionInputSchema>;
+export type SaveSubmissionInput = v.InferOutput<
+  typeof saveSubmissionInputSchema
+>;
 
 export const saveSubmissionOutputSchema = v.object({
   submissionId: v.string(),
@@ -124,7 +130,9 @@ export const saveSubmissionOutputSchema = v.object({
   spotifyTrackUrl: v.string(),
   note: v.nullable(v.string()),
 });
-export type SaveSubmissionOutput = v.InferOutput<typeof saveSubmissionOutputSchema>;
+export type SaveSubmissionOutput = v.InferOutput<
+  typeof saveSubmissionOutputSchema
+>;
 
 const playerSchema = v.object({
   id: v.string(),
@@ -279,7 +287,10 @@ export type AdvanceRoundOutput = v.InferOutput<typeof advanceRoundOutputSchema>;
 
 export const saveBallotInputSchema = v.object({
   gameId: v.string(),
-  submissionIds: v.pipe(v.array(v.string()), v.length(3, "Must star exactly 3 submissions")),
+  submissionIds: v.pipe(
+    v.array(v.string()),
+    v.length(3, "Must star exactly 3 submissions"),
+  ),
 });
 export type SaveBallotInput = v.InferOutput<typeof saveBallotInputSchema>;
 

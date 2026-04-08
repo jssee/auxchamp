@@ -8,7 +8,9 @@ dotenv.config({
 });
 
 const { db } = await import("@auxchamp/db");
-const { game, player, round, star, submission } = await import("@auxchamp/db/schema/game");
+const { game, player, round, star, submission } = await import(
+  "@auxchamp/db/schema/game"
+);
 const { user } = await import("@auxchamp/db/schema/auth");
 const {
   acceptInvite,
@@ -65,7 +67,10 @@ test("createGame creates a draft game and creator participation", async () => {
 
   createdGameIds.add(result.gameId);
 
-  const [createdGame] = await db.select().from(game).where(eq(game.id, result.gameId));
+  const [createdGame] = await db
+    .select()
+    .from(game)
+    .where(eq(game.id, result.gameId));
   const [creatorPlayer] = await db
     .select()
     .from(player)
@@ -222,7 +227,9 @@ test("invitePlayer creates an invited player row", async () => {
   const [invitedPlayer] = await db
     .select()
     .from(player)
-    .where(and(eq(player.gameId, draftGame.gameId), eq(player.userId, invitee.id)));
+    .where(
+      and(eq(player.gameId, draftGame.gameId), eq(player.userId, invitee.id)),
+    );
 
   expect(result).toMatchObject({
     playerId: expect.any(String),
@@ -293,7 +300,10 @@ test("invitePlayer rejects invite to non-draft game", async () => {
 
   createdGameIds.add(draftGame.gameId);
 
-  await db.update(game).set({ state: "active" }).where(eq(game.id, draftGame.gameId));
+  await db
+    .update(game)
+    .set({ state: "active" })
+    .where(eq(game.id, draftGame.gameId));
 
   await expectOrpcError(
     invitePlayer(creator.id, {
@@ -327,7 +337,9 @@ test("acceptInvite activates an invited player", async () => {
   const [acceptedPlayer] = await db
     .select()
     .from(player)
-    .where(and(eq(player.gameId, draftGame.gameId), eq(player.userId, invitee.id)));
+    .where(
+      and(eq(player.gameId, draftGame.gameId), eq(player.userId, invitee.id)),
+    );
 
   expect(result).toMatchObject({
     gameId: draftGame.gameId,
@@ -351,10 +363,13 @@ test("acceptInvite rejects if no pending invite", async () => {
 
   createdGameIds.add(draftGame.gameId);
 
-  await expectOrpcError(acceptInvite(stranger.id, { gameId: draftGame.gameId }), {
-    code: "NOT_FOUND",
-    status: 404,
-  });
+  await expectOrpcError(
+    acceptInvite(stranger.id, { gameId: draftGame.gameId }),
+    {
+      code: "NOT_FOUND",
+      status: 404,
+    },
+  );
 });
 
 test("acceptInvite rejects if already active", async () => {
@@ -374,10 +389,13 @@ test("acceptInvite rejects if already active", async () => {
   });
   await acceptInvite(invitee.id, { gameId: draftGame.gameId });
 
-  await expectOrpcError(acceptInvite(invitee.id, { gameId: draftGame.gameId }), {
-    code: "NOT_FOUND",
-    status: 404,
-  });
+  await expectOrpcError(
+    acceptInvite(invitee.id, { gameId: draftGame.gameId }),
+    {
+      code: "NOT_FOUND",
+      status: 404,
+    },
+  );
 });
 
 // -- startGame ------------------------------------------------------------
@@ -551,7 +569,10 @@ test("saveBallot creates a ballot with 3 stars during voting", async () => {
   // players[0] is allPlayers[1], so their submission is submissionIds[1].
   // Vote for the other three: creator (0), players[1] (2), players[2] (3).
   const targets = [submissionIds[0]!, submissionIds[2]!, submissionIds[3]!];
-  const result = await saveBallot(players[0]!.id, { gameId, submissionIds: targets });
+  const result = await saveBallot(players[0]!.id, {
+    gameId,
+    submissionIds: targets,
+  });
 
   // Capture before toMatchObject — Bun's matcher can mutate the received object.
   const ballotId = result.ballotId;
@@ -583,7 +604,10 @@ test("saveBallot updates an existing ballot by replacing stars", async () => {
 
   expect(second.ballotId).toBe(first.ballotId);
 
-  const stars = await db.select().from(star).where(eq(star.ballotId, first.ballotId));
+  const stars = await db
+    .select()
+    .from(star)
+    .where(eq(star.ballotId, first.ballotId));
   expect(stars).toHaveLength(3);
 });
 
@@ -801,7 +825,10 @@ test("advanceRound completes the game when no more rounds remain", async () => {
     gameCompleted: true,
   });
 
-  const [completedGame] = await db.select().from(game).where(eq(game.id, gameId));
+  const [completedGame] = await db
+    .select()
+    .from(game)
+    .where(eq(game.id, gameId));
   expect(completedGame).toMatchObject({ state: "completed" });
   expect(completedGame!.completedAt).toBeInstanceOf(Date);
 });

@@ -16,8 +16,12 @@ test("createAuth keeps the shared username plugin while allowing framework-speci
 
   expect(auth).toBeDefined();
   expect(appAuth).toBeDefined();
-  expect(auth.options.plugins.some((entry) => entry.id === "username")).toBeTrue();
-  expect(appAuth.options.plugins.some((entry) => entry.id === "username")).toBeTrue();
+  expect(
+    auth.options.plugins.some((entry) => entry.id === "username"),
+  ).toBeTrue();
+  expect(
+    appAuth.options.plugins.some((entry) => entry.id === "username"),
+  ).toBeTrue();
   expect(appAuth.options.plugins).toContain(plugin);
   expect(auth.options.plugins).not.toContain(plugin);
 });

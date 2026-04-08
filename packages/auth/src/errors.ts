@@ -18,7 +18,11 @@ export function getAuthErrorCode(error: unknown) {
     return null;
   }
 
-  if ("body" in error && typeof error.body === "object" && error.body !== null) {
+  if (
+    "body" in error &&
+    typeof error.body === "object" &&
+    error.body !== null
+  ) {
     const code = "code" in error.body ? error.body.code : null;
 
     if (typeof code === "string") {

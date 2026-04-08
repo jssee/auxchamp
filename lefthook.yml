@@ -4,14 +4,6 @@
 pre-commit:
   parallel: true
   jobs:
-    - name: oxlint
-      run: bun oxlint --fix {staged_files}
-      stage_fixed: true
-    - name: oxfmt
-      glob: "*.{js,ts,jsx,tsx,mjs,mts,cjs,cts,json}"
-      run: bun oxfmt --no-error-on-unmatched-pattern --write {staged_files}
-      stage_fixed: true
-    - name: prettier-svelte
-      glob: "*.svelte"
-      run: bun prettier --write {staged_files}
+    - name: biome
+      run: bun biome check --diagnostic-level=error --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true

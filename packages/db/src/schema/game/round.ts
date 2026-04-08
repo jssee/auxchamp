@@ -14,7 +14,12 @@ import { ballot } from "./ballot";
 import { game } from "./game";
 import { submission } from "./submission";
 
-export const roundPhase = pgEnum("round_phase", ["pending", "submitting", "voting", "scored"]);
+export const roundPhase = pgEnum("round_phase", [
+  "pending",
+  "submitting",
+  "voting",
+  "scored",
+]);
 
 export const round = pgTable(
   "round",

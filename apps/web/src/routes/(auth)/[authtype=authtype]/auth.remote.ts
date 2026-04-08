@@ -30,7 +30,10 @@ export const signUp = form(signUpSchema, async (data, issue) => {
     console.error(err);
 
     const code = getAuthErrorCode(err);
-    const message = getAuthErrorMessage(err, "Sign up failed. Please try again.");
+    const message = getAuthErrorMessage(
+      err,
+      "Sign up failed. Please try again.",
+    );
 
     if (code && USERNAME_AUTH_ERROR_CODES.has(code)) {
       invalid(issue.username(message));
@@ -84,7 +87,11 @@ export const signIn = form(signInSchema, async (data, _issue) => {
   redirect(302, safeRedirect);
 });
 
-const sanitizeRedirect = (redirectTo: string | null, baseUrl: URL, fallback: string) => {
+const sanitizeRedirect = (
+  redirectTo: string | null,
+  baseUrl: URL,
+  fallback: string,
+) => {
   if (!redirectTo) {
     return fallback;
   }

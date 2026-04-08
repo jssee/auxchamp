@@ -28,22 +28,30 @@ test("milestone 1 game tables expose the expected shape and structural constrain
     "createdAt",
     "updatedAt",
   ]);
-  expect(getTableConfig(gameSchema.game).checks.map((constraint) => constraint.name)).toEqual([
+  expect(
+    getTableConfig(gameSchema.game).checks.map((constraint) => constraint.name),
+  ).toEqual([
     "game_submission_window_days_positive",
     "game_voting_window_days_positive",
   ]);
 
   expect(getTableConfig(gameSchema.player).name).toBe("player");
   expect(
-    getTableConfig(gameSchema.player).uniqueConstraints.map((constraint) => constraint.getName()),
+    getTableConfig(gameSchema.player).uniqueConstraints.map((constraint) =>
+      constraint.getName(),
+    ),
   ).toEqual(["player_game_id_user_id_unique"]);
 
   expect(getTableConfig(gameSchema.round).name).toBe("round");
-  expect(getTableConfig(gameSchema.round).checks.map((constraint) => constraint.name)).toEqual([
-    "round_number_positive",
-  ]);
   expect(
-    getTableConfig(gameSchema.round).uniqueConstraints.map((constraint) => constraint.getName()),
+    getTableConfig(gameSchema.round).checks.map(
+      (constraint) => constraint.name,
+    ),
+  ).toEqual(["round_number_positive"]);
+  expect(
+    getTableConfig(gameSchema.round).uniqueConstraints.map((constraint) =>
+      constraint.getName(),
+    ),
   ).toEqual(["round_game_id_number_unique"]);
 
   expect(getTableConfig(gameSchema.submission).name).toBe("submission");
@@ -62,7 +70,9 @@ test("milestone 1 game tables expose the expected shape and structural constrain
     "updatedAt",
   ]);
   expect(
-    getTableConfig(gameSchema.ballot).uniqueConstraints.map((constraint) => constraint.getName()),
+    getTableConfig(gameSchema.ballot).uniqueConstraints.map((constraint) =>
+      constraint.getName(),
+    ),
   ).toEqual(["ballot_round_id_player_id_unique"]);
 
   expect(getTableConfig(gameSchema.star).name).toBe("star");
@@ -73,6 +83,8 @@ test("milestone 1 game tables expose the expected shape and structural constrain
     "createdAt",
   ]);
   expect(
-    getTableConfig(gameSchema.star).uniqueConstraints.map((constraint) => constraint.getName()),
+    getTableConfig(gameSchema.star).uniqueConstraints.map((constraint) =>
+      constraint.getName(),
+    ),
   ).toEqual(["star_ballot_id_submission_id_unique"]);
 });

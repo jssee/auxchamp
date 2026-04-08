@@ -80,7 +80,10 @@ test("returns game metadata, players, and rounds for a draft game", async () => 
 
   await addRound(creator.id, { gameId: draftGame.gameId, theme: "Openers" });
   await addRound(creator.id, { gameId: draftGame.gameId, theme: "Deep cuts" });
-  await invitePlayer(creator.id, { gameId: draftGame.gameId, targetUserId: invitee.id });
+  await invitePlayer(creator.id, {
+    gameId: draftGame.gameId,
+    targetUserId: invitee.id,
+  });
   await acceptInvite(invitee.id, { gameId: draftGame.gameId });
 
   const detail = await getGame(creator.id, draftGame.gameId);
@@ -113,8 +116,16 @@ test("returns game metadata, players, and rounds for a draft game", async () => 
   );
 
   expect(detail!.rounds).toHaveLength(2);
-  expect(detail!.rounds[0]).toMatchObject({ number: 1, theme: "Openers", submissionCount: 0 });
-  expect(detail!.rounds[1]).toMatchObject({ number: 2, theme: "Deep cuts", submissionCount: 0 });
+  expect(detail!.rounds[0]).toMatchObject({
+    number: 1,
+    theme: "Openers",
+    submissionCount: 0,
+  });
+  expect(detail!.rounds[1]).toMatchObject({
+    number: 2,
+    theme: "Deep cuts",
+    submissionCount: 0,
+  });
 });
 
 test("returns submission count for an active game round", async () => {
@@ -134,10 +145,16 @@ test("returns actorPlayer reflecting the actor's participation", async () => {
   const { gameId, creator, players } = await setupActiveGame();
 
   const creatorDetail = await getGame(creator.id, gameId);
-  expect(creatorDetail!.actorPlayer).toMatchObject({ role: "creator", status: "active" });
+  expect(creatorDetail!.actorPlayer).toMatchObject({
+    role: "creator",
+    status: "active",
+  });
 
   const playerDetail = await getGame(players[1]!.id, gameId);
-  expect(playerDetail!.actorPlayer).toMatchObject({ role: "player", status: "active" });
+  expect(playerDetail!.actorPlayer).toMatchObject({
+    role: "player",
+    status: "active",
+  });
 });
 
 test("returns null for a non-existent game", async () => {
@@ -173,7 +190,9 @@ test("returns roundResults and standings after scoring", async () => {
   for (const voter of allPlayers) {
     const roundDetail = await getRound(voter.id, gameId, roundId);
     const subs = roundDetail!.votingSubmissions!;
-    const targets = subs.filter((s) => s.playerId !== roundDetail!.actorPlayer.id).slice(0, 3);
+    const targets = subs
+      .filter((s) => s.playerId !== roundDetail!.actorPlayer.id)
+      .slice(0, 3);
     await saveBallot(voter.id, {
       gameId,
       submissionIds: targets.map((t) => t.id),
@@ -203,7 +222,10 @@ test("returns roundResults and standings after scoring", async () => {
 
   // Standings should cover all players.
   expect(scored!.standings.length).toBeGreaterThan(0);
-  const totalStars = scored!.standings.reduce((sum, s) => sum + s.totalStars, 0);
+  const totalStars = scored!.standings.reduce(
+    (sum, s) => sum + s.totalStars,
+    0,
+  );
   // Each voter gives 3 stars, so total = playerCount * 3.
   expect(totalStars).toBe(allPlayers.length * 3);
 });
@@ -328,7 +350,9 @@ test("getRound returns results for a scored round", async () => {
   for (const voter of allPlayers) {
     const roundDetail = await getRound(voter.id, gameId, roundId);
     const subs = roundDetail!.votingSubmissions!;
-    const targets = subs.filter((s) => s.playerId !== roundDetail!.actorPlayer.id).slice(0, 3);
+    const targets = subs
+      .filter((s) => s.playerId !== roundDetail!.actorPlayer.id)
+      .slice(0, 3);
     await saveBallot(voter.id, {
       gameId,
       submissionIds: targets.map((t) => t.id),
@@ -370,7 +394,10 @@ test("getRound returns empty actions for a pending round", async () => {
   const players = [];
   for (let i = 0; i < 3; i++) {
     const p = await createTestUser();
-    await invitePlayer(creator.id, { gameId: gameResult.gameId, targetUserId: p.id });
+    await invitePlayer(creator.id, {
+      gameId: gameResult.gameId,
+      targetUserId: p.id,
+    });
     await acceptInvite(p.id, { gameId: gameResult.gameId });
     players.push(p);
   }
@@ -381,7 +408,11 @@ test("getRound returns empty actions for a pending round", async () => {
   const pendingRound = gameDetail!.rounds.find((r) => r.phase === "pending");
   expect(pendingRound).toBeDefined();
 
-  const result = await getRound(creator.id, gameResult.gameId, pendingRound!.id);
+  const result = await getRound(
+    creator.id,
+    gameResult.gameId,
+    pendingRound!.id,
+  );
   expect(result!.phase).toBe("pending");
   // Pending round: no submit/vote/transition actions since it's not the active round.
   expect(result!.actions).not.toContain("submit_song");
@@ -396,10 +427,16 @@ test("getRound includes actorPlayer with correct role", async () => {
   const roundId = gameDetail!.rounds[0]!.id;
 
   const creatorRound = await getRound(creator.id, gameId, roundId);
-  expect(creatorRound!.actorPlayer).toMatchObject({ role: "creator", status: "active" });
+  expect(creatorRound!.actorPlayer).toMatchObject({
+    role: "creator",
+    status: "active",
+  });
 
   const playerRound = await getRound(players[0]!.id, gameId, roundId);
-  expect(playerRound!.actorPlayer).toMatchObject({ role: "player", status: "active" });
+  expect(playerRound!.actorPlayer).toMatchObject({
+    role: "player",
+    status: "active",
+  });
 });
 
 // -- test helpers ---------------------------------------------------------
@@ -419,7 +456,10 @@ async function setupActiveGame() {
   const players: Awaited<ReturnType<typeof createTestUser>>[] = [];
   for (let i = 0; i < 3; i++) {
     const p = await createTestUser();
-    await invitePlayer(creator.id, { gameId: draftGame.gameId, targetUserId: p.id });
+    await invitePlayer(creator.id, {
+      gameId: draftGame.gameId,
+      targetUserId: p.id,
+    });
     await acceptInvite(p.id, { gameId: draftGame.gameId });
     players.push(p);
   }

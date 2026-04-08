@@ -8,7 +8,10 @@ export const env = createEnv({
     BETTER_AUTH_SECRET: v.pipe(v.string(), v.minLength(32)),
     BETTER_AUTH_URL: v.pipe(v.string(), v.url()),
     CORS_ORIGIN: v.pipe(v.string(), v.url()),
-    NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
+    NODE_ENV: v.optional(
+      v.picklist(["development", "production", "test"]),
+      "development",
+    ),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

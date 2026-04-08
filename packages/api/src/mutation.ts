@@ -2,7 +2,14 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, count, desc, eq, inArray, or } from "drizzle-orm";
 
 import { db } from "@auxchamp/db";
-import { ballot, game, player, round, star, submission } from "@auxchamp/db/schema/game";
+import {
+  ballot,
+  game,
+  player,
+  round,
+  star,
+  submission,
+} from "@auxchamp/db/schema/game";
 import { nanoid } from "nanoid";
 import type {
   AcceptInviteInput,
@@ -62,7 +69,10 @@ export async function createGame(
   });
 }
 
-export async function addRound(actorUserId: string, input: AddRoundInput): Promise<AddRoundOutput> {
+export async function addRound(
+  actorUserId: string,
+  input: AddRoundInput,
+): Promise<AddRoundOutput> {
   return db.transaction(async (tx) => {
     const [draftGame] = await tx
       .select({ state: game.state })
@@ -72,7 +82,9 @@ export async function addRound(actorUserId: string, input: AddRoundInput): Promi
     const [creatorPlayer] = await tx
       .select({ role: player.role })
       .from(player)
-      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .where(
+        and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)),
+      )
       .limit(1);
 
     if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
@@ -122,7 +134,9 @@ export async function invitePlayer(
     const [creatorPlayer] = await tx
       .select({ role: player.role })
       .from(player)
-      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .where(
+        and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)),
+      )
       .limit(1);
 
     if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
@@ -134,11 +148,18 @@ export async function invitePlayer(
     const [existing] = await tx
       .select({ id: player.id })
       .from(player)
-      .where(and(eq(player.gameId, input.gameId), eq(player.userId, input.targetUserId)))
+      .where(
+        and(
+          eq(player.gameId, input.gameId),
+          eq(player.userId, input.targetUserId),
+        ),
+      )
       .limit(1);
 
     if (existing) {
-      throw new ORPCError("CONFLICT", { message: "Player is already in this game." });
+      throw new ORPCError("CONFLICT", {
+        message: "Player is already in this game.",
+      });
     }
 
     const playerId = nanoid();
@@ -168,7 +189,9 @@ export async function acceptInvite(
     const [invitedPlayer] = await tx
       .select({ id: player.id, status: player.status })
       .from(player)
-      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .where(
+        and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)),
+      )
       .limit(1);
 
     if (invitedPlayer?.status !== "invited") {
@@ -207,11 +230,15 @@ export async function startGame(
     const [creatorPlayer] = await tx
       .select({ role: player.role })
       .from(player)
-      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .where(
+        and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)),
+      )
       .limit(1);
 
     if (draftGame?.state !== "draft" || creatorPlayer?.role !== "creator") {
-      throw new ORPCError("FORBIDDEN", { message: "Only the creator can start a draft game." });
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only the creator can start a draft game.",
+      });
     }
 
     const [firstRound] = await tx
@@ -222,7 +249,9 @@ export async function startGame(
       .limit(1);
 
     if (!firstRound) {
-      throw new ORPCError("PRECONDITION_FAILED", { message: "Game must have at least one round." });
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "Game must have at least one round.",
+      });
     }
 
     const [playerCount] = await tx
@@ -238,9 +267,14 @@ export async function startGame(
 
     const now = new Date();
     const submissionClosesAt = new Date(now);
-    submissionClosesAt.setDate(submissionClosesAt.getDate() + draftGame.submissionWindowDays);
+    submissionClosesAt.setDate(
+      submissionClosesAt.getDate() + draftGame.submissionWindowDays,
+    );
 
-    await tx.update(game).set({ state: "active", startedAt: now }).where(eq(game.id, input.gameId));
+    await tx
+      .update(game)
+      .set({ state: "active", startedAt: now })
+      .where(eq(game.id, input.gameId));
 
     await tx
       .update(round)
@@ -278,7 +312,9 @@ export async function saveSubmission(
       .limit(1);
 
     if (!activePlayer) {
-      throw new ORPCError("FORBIDDEN", { message: "Only active players can submit." });
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only active players can submit.",
+      });
     }
 
     const [submittingRound] = await tx
@@ -296,8 +332,13 @@ export async function saveSubmission(
       });
     }
 
-    if (submittingRound.submissionClosesAt && submittingRound.submissionClosesAt < new Date()) {
-      throw new ORPCError("PRECONDITION_FAILED", { message: "The submission window has closed." });
+    if (
+      submittingRound.submissionClosesAt &&
+      submittingRound.submissionClosesAt < new Date()
+    ) {
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "The submission window has closed.",
+      });
     }
 
     const submissionId = nanoid();
@@ -352,7 +393,9 @@ export async function saveBallot(
       .limit(1);
 
     if (!activePlayer) {
-      throw new ORPCError("FORBIDDEN", { message: "Only active players can vote." });
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only active players can vote.",
+      });
     }
 
     const [votingRound] = await tx
@@ -371,13 +414,17 @@ export async function saveBallot(
     }
 
     if (votingRound.votingClosesAt && votingRound.votingClosesAt < new Date()) {
-      throw new ORPCError("PRECONDITION_FAILED", { message: "The voting window has closed." });
+      throw new ORPCError("PRECONDITION_FAILED", {
+        message: "The voting window has closed.",
+      });
     }
 
     // Validate distinctness.
     const uniqueIds = new Set(input.submissionIds);
     if (uniqueIds.size !== 3) {
-      throw new ORPCError("BAD_REQUEST", { message: "Must star 3 distinct submissions." });
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Must star 3 distinct submissions.",
+      });
     }
 
     // Validate all submissions belong to the voting round.
@@ -385,25 +432,36 @@ export async function saveBallot(
       .select({ id: submission.id, playerId: submission.playerId })
       .from(submission)
       .where(
-        and(eq(submission.roundId, votingRound.id), inArray(submission.id, input.submissionIds)),
+        and(
+          eq(submission.roundId, votingRound.id),
+          inArray(submission.id, input.submissionIds),
+        ),
       );
 
     if (targetSubmissions.length !== 3) {
       throw new ORPCError("BAD_REQUEST", {
-        message: "All starred submissions must belong to the current voting round.",
+        message:
+          "All starred submissions must belong to the current voting round.",
       });
     }
 
     // Validate no self-voting.
     if (targetSubmissions.some((s) => s.playerId === activePlayer.id)) {
-      throw new ORPCError("BAD_REQUEST", { message: "Cannot star your own submission." });
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Cannot star your own submission.",
+      });
     }
 
     // Upsert ballot: delete existing stars and replace.
     const [existing] = await tx
       .select({ id: ballot.id })
       .from(ballot)
-      .where(and(eq(ballot.roundId, votingRound.id), eq(ballot.playerId, activePlayer.id)))
+      .where(
+        and(
+          eq(ballot.roundId, votingRound.id),
+          eq(ballot.playerId, activePlayer.id),
+        ),
+      )
       .limit(1);
 
     let ballotId: string;
@@ -456,11 +514,15 @@ export async function advanceRound(
     const [creatorPlayer] = await tx
       .select({ role: player.role })
       .from(player)
-      .where(and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)))
+      .where(
+        and(eq(player.gameId, input.gameId), eq(player.userId, actorUserId)),
+      )
       .limit(1);
 
     if (creatorPlayer?.role !== "creator") {
-      throw new ORPCError("FORBIDDEN", { message: "Only the creator can advance the round." });
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only the creator can advance the round.",
+      });
     }
 
     // Fetch game config and active round in parallel.
@@ -492,10 +554,19 @@ export async function advanceRound(
     }
 
     if (activeRound.phase === "submitting") {
-      return advanceSubmittingToVoting(tx, activeRound, gameRow!.votingWindowDays);
+      return advanceSubmittingToVoting(
+        tx,
+        activeRound,
+        gameRow!.votingWindowDays,
+      );
     }
 
-    return advanceVotingToScored(tx, input.gameId, activeRound, gameRow!.submissionWindowDays);
+    return advanceVotingToScored(
+      tx,
+      input.gameId,
+      activeRound,
+      gameRow!.submissionWindowDays,
+    );
   });
 }
 
@@ -531,7 +602,10 @@ async function advanceVotingToScored(
   submissionWindowDays: number,
 ): Promise<AdvanceRoundOutput> {
   // Mark the round as scored.
-  await tx.update(round).set({ phase: "scored" }).where(eq(round.id, activeRound.id));
+  await tx
+    .update(round)
+    .set({ phase: "scored" })
+    .where(eq(round.id, activeRound.id));
 
   // Find the next pending round.
   const [nextRound] = await tx
@@ -544,7 +618,9 @@ async function advanceVotingToScored(
   if (nextRound) {
     const now = new Date();
     const submissionClosesAt = new Date(now);
-    submissionClosesAt.setDate(submissionClosesAt.getDate() + submissionWindowDays);
+    submissionClosesAt.setDate(
+      submissionClosesAt.getDate() + submissionWindowDays,
+    );
 
     await tx
       .update(round)

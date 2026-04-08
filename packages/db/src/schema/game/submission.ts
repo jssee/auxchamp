@@ -27,7 +27,10 @@ export const submission = pgTable(
   (table) => [
     index("submission_round_id_idx").on(table.roundId),
     index("submission_player_id_idx").on(table.playerId),
-    unique("submission_round_id_player_id_unique").on(table.roundId, table.playerId),
+    unique("submission_round_id_player_id_unique").on(
+      table.roundId,
+      table.playerId,
+    ),
   ],
 );
 

@@ -11,7 +11,8 @@ const { appRouter } = await import("./router");
 const { db } = await import("@auxchamp/db");
 const { game, player, submission } = await import("@auxchamp/db/schema/game");
 const { user } = await import("@auxchamp/db/schema/auth");
-const { acceptInvite, addRound, createGame, invitePlayer, startGame } = await import("./mutation");
+const { acceptInvite, addRound, createGame, invitePlayer, startGame } =
+  await import("./mutation");
 
 const createdGameIds = new Set<string>();
 const createdUserIds = new Set<string>();
@@ -34,7 +35,9 @@ test("top-level getPublicProfile remains accessible without a session", async ()
     context: () => ({}) as any,
   });
 
-  await expect(api.getPublicProfile({ username: profileOwner.username })).resolves.toMatchObject({
+  await expect(
+    api.getPublicProfile({ username: profileOwner.username }),
+  ).resolves.toMatchObject({
     id: profileOwner.id,
     username: profileOwner.username,
     displayUsername: profileOwner.displayUsername,
@@ -73,7 +76,10 @@ test("top-level saveSubmission rejects non-track Spotify URLs at the procedure b
     .limit(1);
 
   const createdSubmissions = submitterPlayer
-    ? await db.select().from(submission).where(eq(submission.playerId, submitterPlayer.id))
+    ? await db
+        .select()
+        .from(submission)
+        .where(eq(submission.playerId, submitterPlayer.id))
     : [];
 
   expect(createdSubmissions).toHaveLength(0);

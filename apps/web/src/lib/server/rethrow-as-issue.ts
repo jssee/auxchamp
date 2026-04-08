@@ -1,7 +1,10 @@
 import { invalid } from "@sveltejs/kit";
 import { ORPCError } from "@orpc/server";
 
-type Issue = { message: string; path?: ReadonlyArray<PropertyKey | { key: PropertyKey }> };
+type Issue = {
+  message: string;
+  path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+};
 
 /**
  * If `thrown` is a non-auth ORPCError, surface it as a form field issue via
@@ -15,7 +18,9 @@ type Issue = { message: string; path?: ReadonlyArray<PropertyKey | { key: Proper
  */
 export function rethrowAsIssue(thrown: unknown, fieldIssue: Issue): never {
   if (thrown instanceof ORPCError && thrown.code !== "UNAUTHORIZED") {
-    invalid(thrown.message ? { ...fieldIssue, message: thrown.message } : fieldIssue);
+    invalid(
+      thrown.message ? { ...fieldIssue, message: thrown.message } : fieldIssue,
+    );
   }
 
   throw thrown;

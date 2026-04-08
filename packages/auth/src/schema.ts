@@ -1,12 +1,25 @@
 import * as v from "valibot";
 
-import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PATTERN } from "./constants";
+import {
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  USERNAME_PATTERN,
+} from "./constants";
 
 const usernameSchema = v.pipe(
   v.string(),
-  v.minLength(USERNAME_MIN_LENGTH, `Username must be at least ${USERNAME_MIN_LENGTH} characters`),
-  v.maxLength(USERNAME_MAX_LENGTH, `Username must be at most ${USERNAME_MAX_LENGTH} characters`),
-  v.regex(USERNAME_PATTERN, "Username can only contain letters, numbers, underscores, and periods"),
+  v.minLength(
+    USERNAME_MIN_LENGTH,
+    `Username must be at least ${USERNAME_MIN_LENGTH} characters`,
+  ),
+  v.maxLength(
+    USERNAME_MAX_LENGTH,
+    `Username must be at most ${USERNAME_MAX_LENGTH} characters`,
+  ),
+  v.regex(
+    USERNAME_PATTERN,
+    "Username can only contain letters, numbers, underscores, and periods",
+  ),
 );
 
 const nameSchema = v.pipe(
@@ -19,7 +32,10 @@ const nameSchema = v.pipe(
 
 const emailSchema = v.pipe(v.string(), v.email("Invalid email address"));
 
-const passwordSchema = v.pipe(v.string(), v.minLength(8, "Password must be at least 8 characters"));
+const passwordSchema = v.pipe(
+  v.string(),
+  v.minLength(8, "Password must be at least 8 characters"),
+);
 
 export const signInSchema = v.object({
   email: emailSchema,
@@ -43,6 +59,9 @@ export const changeEmailSchema = v.object({
 });
 
 export const changePasswordSchema = v.object({
-  currentPassword: v.pipe(v.string(), v.minLength(1, "Current password is required")),
+  currentPassword: v.pipe(
+    v.string(),
+    v.minLength(1, "Current password is required"),
+  ),
   newPassword: passwordSchema,
 });

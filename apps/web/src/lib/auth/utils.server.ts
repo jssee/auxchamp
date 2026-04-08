@@ -10,7 +10,11 @@ import type { AuthMessageCode } from "./messages";
  * `messageCode` is a key into AUTH_MESSAGES — the client resolves it
  * to a static display string so arbitrary text never reaches the UI.
  */
-export async function requireSession(request: Request, url: URL, messageCode?: AuthMessageCode) {
+export async function requireSession(
+  request: Request,
+  url: URL,
+  messageCode?: AuthMessageCode,
+) {
   const session = await auth.api.getSession({
     headers: request.headers,
   });
